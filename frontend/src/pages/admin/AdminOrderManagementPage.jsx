@@ -6,7 +6,7 @@ import StatusBadge from '../../components/marketing/StatusBadge'
 import SearchBar from '../../components/marketing/SearchBar'
 import Modal from '../../components/marketing/Modal'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminOrders, updateAdminOrderStatus, getAdminRefunds, updateAdminRefundStatus } from '../../api'
+import { getAdminOrders, getAdminRefunds, updateAdminRefundStatus } from '../../api'
 import { ORDERS as MOCK_ORDERS, REFUND_REQUESTS as MOCK_REFUND_REQUESTS } from '../../data/adminMockData'
 
 export default function AdminOrderManagementPage() {

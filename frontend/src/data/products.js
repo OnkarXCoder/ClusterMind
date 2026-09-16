@@ -1,4 +1,4 @@
-const products = [
+export const products = [
   {
     id: 1,
     name: "Apple MacBook Air M2",
@@ -1241,5 +1241,7 @@ const products = [
     inStock: true,
   },
 ];
+
+export const categories = ["All", ...new Set(products.map((product) => product.category))];
 
 export default products;

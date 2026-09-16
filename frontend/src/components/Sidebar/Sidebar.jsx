@@ -27,6 +27,7 @@ const menu = [
   { name: "Wishlist", icon: <Heart size={18} />, path: "/wishlist" },
   { name: "Cart", icon: <ShoppingCart size={18} />, path: "/cart" },
   { name: "Orders", icon: <Package size={18} />, path: "/orders" },
+  { name: "Gift Assistant", icon: <Gift size={18} />, path: "/#gift-assistant" },
   { name: "AI Recommendations", icon: <Sparkles size={18} />, path: "/#ai-recommendations" },
   { name: "Offers & Coupons", icon: <BadgePercent size={18} />, path: "/#offers" },
   { name: "Loyalty Points", icon: <Gift size={18} />, path: "/#loyalty" },
@@ -48,10 +49,10 @@ export default function Sidebar({ open, onClose }) {
 
   const handleClick = (item) => {
     if (item.path) {
-      if (item.path.startsWith("/#")) {
-        const id = item.path.slice(2);
-        if (location.pathname !== "/") {
-          navigate("/", { state: { scrollTo: id } });
+      if (item.path.includes("#")) {
+        const [path, id] = item.path.split("#");
+        if (location.pathname !== path) {
+          navigate(path, { state: { scrollTo: id } });
         } else {
           document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
         }

@@ -27,8 +27,8 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await fakeLogin({ identifier: contact, password });
-      if (user?.role === "marketing") navigate("/marketing");
-      else if (user?.role === "admin") navigate("/");
+      if (user?.role === "marketing" || user?.role === "aiml") navigate("/marketing");
+      else if (user?.role === "admin") navigate("/admin");
       else navigate("/");
     } catch (errObj) {
       setErrors(errObj);

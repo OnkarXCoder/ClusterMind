@@ -5,7 +5,7 @@ const router = Router()
 
 router.get('/', async (req, res) => {
   try {
-    const { search, category, brand, minPrice, maxPrice, minRating, inStock, sort, limit } = req.query
+    const { search, category, brand, minPrice, maxPrice, minRating, inStock, sort, limit, giftRecipient } = req.query
     const filter = {}
 
     if (category && category !== 'All') filter.category = category
@@ -19,6 +19,17 @@ router.get('/', async (req, res) => {
       }
     }
     if (brand) filter.brand = brand
+    if (giftRecipient) {
+      const recipient = String(giftRecipient).trim().toLowerCase()
+      if (recipient) {
+        filter.$or = [
+          ...(filter.$or || []),
+          { giftTags: recipient },
+          { category: { $regex: recipient, $options: 'i' } },
+          { name: { $regex: recipient, $options: 'i' } },
+        ]
+      }
+    }
     if (minPrice || maxPrice) {
       filter.price = {}
       if (minPrice) filter.price.$gte = Number(minPrice)

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Sparkles, CheckCircle2, Percent, Banknote, Wand2, Package, Gift, Tag, Megaphone } from 'lucide-react'
 import KpiCard from '../../components/marketing/KpiCard'
 import ChartCard from '../../components/marketing/ChartCard'
@@ -8,6 +8,7 @@ import StatusBadge from '../../components/marketing/StatusBadge'
 import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
 import { RECOMMENDATIONS } from '../../data/marketingMockData'
+import { generateRecommendations, getRecommendations } from '../../api'
 
 const SECTIONS = [
   { id: 'product', title: 'Product Recommendations', icon: Package, accent: 'from-violet-600 to-purple-600' },
@@ -27,11 +28,29 @@ const COLUMNS = [
 export default function RecommendationEnginePage() {
   const { show } = useToast()
   const [activeSection, setActiveSection] = useState('product')
+  const [recommendations, setRecommendations] = useState(RECOMMENDATIONS)
 
-  const rows = RECOMMENDATIONS[activeSection]
+  const rows = recommendations[activeSection] || []
 
-  const handleGenerate = () => {
-    show('Recommendations have been queued for generation (frontend demo).', 'success')
+  const loadRecommendations = useCallback(async (section = activeSection) => {
+    const liveRows = await getRecommendations(section)
+    if (liveRows) {
+      setRecommendations((current) => ({ ...current, [section]: liveRows }))
+    }
+  }, [activeSection])
+
+  useEffect(() => {
+    loadRecommendations(activeSection)
+  }, [activeSection, loadRecommendations])
+
+  const handleGenerate = async () => {
+    const generated = await generateRecommendations()
+    if (generated) {
+      setRecommendations(generated)
+      show('Recommendations generated from the active dataset.', 'success')
+    } else {
+      show('Unable to generate recommendations. Restore or upload a dataset first.', 'error')
+    }
   }
 
   return (
@@ -47,10 +66,10 @@ export default function RecommendationEnginePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total Recommendations" value={RECOMMENDATIONS.stats[0].value} icon={Sparkles} accent="from-violet-600 to-purple-600" />
-        <KpiCard label="Accepted Recommendations" value={RECOMMENDATIONS.stats[1].value} icon={CheckCircle2} accent="from-emerald-500 to-teal-500" />
-        <KpiCard label="Conversion Rate" value={RECOMMENDATIONS.stats[2].value} icon={Percent} accent="from-blue-600 to-cyan-500" />
-        <KpiCard label="Average Recommendation Value" value={RECOMMENDATIONS.stats[3].value} icon={Banknote} accent="from-amber-500 to-orange-500" />
+        <KpiCard label="Total Recommendations" value={recommendations.stats[0].value} icon={Sparkles} accent="from-violet-600 to-purple-600" />
+        <KpiCard label="Accepted Recommendations" value={recommendations.stats[1].value} icon={CheckCircle2} accent="from-emerald-500 to-teal-500" />
+        <KpiCard label="Conversion Rate" value={recommendations.stats[2].value} icon={Percent} accent="from-blue-600 to-cyan-500" />
+        <KpiCard label="Average Recommendation Value" value={recommendations.stats[3].value} icon={Banknote} accent="from-amber-500 to-orange-500" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -69,7 +88,7 @@ export default function RecommendationEnginePage() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900">{title}</p>
-              <p className="text-xs text-slate-500">{RECOMMENDATIONS[id].length} active</p>
+              <p className="text-xs text-slate-500">{(recommendations[id] || []).length} active</p>
             </div>
           </button>
         ))}

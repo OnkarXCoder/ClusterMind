@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar/Sidebar";
 import Navbar from "../components/Navbar/Navbar";
 import HeroBanner from "../components/HeroBanner/HeroBanner";
 import StatsCards from "../components/StatsCards/StatsCards";
+import CustomerGiftAssistant from "../components/CustomerGiftAssistant/CustomerGiftAssistant";
 import RecommendedProducts from "../components/RecommendedProducts/RecommendedProducts";
 import CustomerProfile from "../components/CustomerProfile/CustomerProfile";
 import TrendingCategories from "../components/TrendingCategories/TrendingCategories";
@@ -47,6 +48,7 @@ export default function Home() {
         <div className="home-content">
           <HeroBanner />
           <StatsCards />
+          <CustomerGiftAssistant />
 
           <div className="recs-row">
             <RecommendedProducts />

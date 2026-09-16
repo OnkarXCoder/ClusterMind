@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, Plus, Send } from 'lucide-react'
+import { Plus, Send } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'

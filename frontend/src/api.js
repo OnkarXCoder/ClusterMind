@@ -1,9 +1,15 @@
 const BASE = '/api'
 
-async function request(path, options) {
+async function request(path, options = {}) {
+  const token = localStorage.getItem('clustermind_token')
+  const { headers, ...requestOptions } = options
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(headers || {}),
+    },
+    ...requestOptions,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
@@ -53,8 +59,13 @@ export function deleteDataset() {
   return mlRequest('/ml/dataset', { method: 'DELETE' })
 }
 
-export function uploadDataset(file) {
-  return mlRequest('/ml/dataset/upload', { method: 'POST', body: file, headers: {} })
+export async function uploadDataset(file) {
+  const text = await file.text()
+  return mlRequest('/ml/dataset/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/csv' },
+    body: text,
+  })
 }
 
 export function trainModel(algorithm, clusters = 5) {
@@ -114,6 +125,26 @@ export function updateAdminCustomerStatus(customerId, status) {
 
 export function getAdminProducts() {
   return adminRequest('/admin/products')
+}
+
+export function createAdminProduct(payload) {
+  return adminRequest('/admin/products', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateAdminProduct(id, payload) {
+  return adminRequest(`/admin/products/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteAdminProduct(id) {
+  return adminRequest(`/admin/products/${id}`, {
+    method: 'DELETE',
+  })
 }
 
 export function getAdminOrders() {

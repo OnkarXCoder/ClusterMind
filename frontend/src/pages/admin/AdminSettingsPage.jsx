@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Settings, Globe, Database, Shield, Key, LogOut } from 'lucide-react'
+import { Settings, Globe, Database, Shield, Key } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import { useToast } from '../../components/marketing/Toast'

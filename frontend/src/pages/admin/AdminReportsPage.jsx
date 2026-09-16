@@ -9,9 +9,6 @@ import {
   LineChart,
   Line,
   Legend,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts'
 import { useEffect, useState } from 'react'
 import { Download, BarChart3, FileText } from 'lucide-react'
@@ -21,8 +18,6 @@ import Button from '../../components/marketing/Button'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminReports } from '../../api'
 import { ADMIN_REPORTS as MOCK_ADMIN_REPORTS } from '../../data/adminMockData'
-
-const COLORS = ['#ef4444', '#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899']
 
 export default function AdminReportsPage() {
   const { show } = useToast()

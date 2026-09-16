@@ -142,7 +142,7 @@ export default function OverviewPage() {
         <KpiCard label="Active Segments" value={KPI.activeSegments} icon={Layers} accent="from-blue-600 to-cyan-500" change="+1 new segment" />
         <KpiCard label="AI Model Evaluation" value={`${KPI.modelEvaluation}%`} icon={Cpu} accent="from-emerald-500 to-teal-500" change="Silhouette score (mock)" />
         <KpiCard label="Active Campaigns" value={KPI.activeCampaigns} icon={Megaphone} accent="from-pink-500 to-rose-500" change="6 live right now" />
-        <KpiCard label="Revenue from Campaigns" value="Γé╣8,75,230" icon={Banknote} accent="from-amber-500 to-orange-500" change="+18.7% this period" />
+        <KpiCard label="Revenue from Campaigns" value="₹8,75,230" icon={Banknote} accent="from-amber-500 to-orange-500" change="+18.7% this period" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -188,7 +188,7 @@ export default function OverviewPage() {
                 </div>
                 <div className="rounded-xl bg-slate-50 p-4">
                   <p className="text-xs text-slate-500">Average Order Value</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">Γé╣{AI_INSIGHTS.averageOrderValue.toLocaleString()}</p>
+                  <p className="mt-1 text-xl font-bold text-slate-900">₹{AI_INSIGHTS.averageOrderValue.toLocaleString()}</p>
                 </div>
               </div>
               <div className="rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 p-4 text-sm text-white">

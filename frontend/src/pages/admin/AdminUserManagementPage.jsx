@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Shield, Plus, Edit3, Trash2, Eye, Clock } from 'lucide-react'
+import { Plus, Edit3, Trash2, Eye, Clock } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
@@ -14,7 +14,6 @@ export default function AdminUserManagementPage() {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('users')
   const [showAddUser, setShowAddUser] = useState(false)
-  const [showAddRole, setShowAddRole] = useState(false)
   const [viewUser, setViewUser] = useState(null)
   const [userForm, setUserForm] = useState({ name: '', email: '', role: '' })
   const [adminUsers, setAdminUsers] = useState(MOCK_ADMIN_USERS)
@@ -63,7 +62,7 @@ export default function AdminUserManagementPage() {
         </div>
         <div className="flex items-center gap-3">
           <SearchBar value={search} onChange={setSearch} placeholder="Search users..." className="w-64" />
-          <Button icon={Plus} onClick={() => activeTab === 'users' ? setShowAddUser(true) : setShowAddRole(true)}>
+          <Button icon={Plus} onClick={() => activeTab === 'users' ? setShowAddUser(true) : show('Add role (demo)', 'info')}>
             {activeTab === 'users' ? 'Add User' : 'Add Role'}
           </Button>
         </div>

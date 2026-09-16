@@ -5,7 +5,6 @@ import {
   Users,
   Package,
   ShoppingCart,
-  Brain,
   Activity,
   Layers,
   Sparkles,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import Button from '../../components/marketing/Button'
+import { getCurrentUser } from '../../services/auth'
 
 const NAV_SECTIONS = [
   {
@@ -73,8 +73,8 @@ const NAV_SECTIONS = [
 export const ADMIN_NAV_ITEMS = NAV_SECTIONS.flatMap((s) => s.items)
 
 export default function AdminSidebar({ open, onClose, onLogout }) {
-  const user = JSON.parse(localStorage.getItem('shopsmart_user') || '{}')
-  const name = user.name || 'Admin'
+  const user = getCurrentUser() || {}
+  const name = user.fullName || user.name || 'Admin'
   const initials = name
     .split(' ')
     .map((w) => w[0])
@@ -94,42 +94,45 @@ export default function AdminSidebar({ open, onClose, onLogout }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm lg:hidden"
+            className="internal-overlay lg:hidden"
             onClick={onClose}
           />
         )}
       </AnimatePresence>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#0d1226] transition-transform duration-300 lg:translate-x-0 ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`internal-sidebar ${open ? 'open' : ''}`}
       >
-        <div className="flex items-center justify-between px-6 py-6">
+        <div className="internal-brand">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg shadow-red-500/30">
+            <div className="internal-brand-mark" style={{ background: '#f97316' }}>
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-lg font-black tracking-tight text-white">ShopSmart</p>
-              <p className="text-[11px] font-medium text-slate-400">Admin Dashboard</p>
+              <p className="internal-brand-title">ShopSmart</p>
+              <p className="internal-brand-subtitle">Admin Dashboard</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 transition hover:text-white lg:hidden"
+            className="internal-close"
             aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-4 pb-4">
+        <div className="internal-dashboard-tag">
+          <p>Dashboard</p>
+          <p>Administration</p>
+        </div>
+
+        <nav>
           {NAV_SECTIONS.map((section) => (
-            <div key={section.label} className="mb-3">
+            <div key={section.label} className="internal-sidebar-section">
               <button
                 onClick={() => toggle(section.label)}
-                className="flex w-full items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500 transition hover:text-slate-300"
+                className="internal-section-toggle"
               >
                 {section.label}
                 <ChevronDown
@@ -144,9 +147,7 @@ export default function AdminSidebar({ open, onClose, onLogout }) {
                     end={end}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                        isActive ? 'text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                      }`
+                      `internal-nav-link px-4 py-2.5 ${isActive ? 'active' : ''}`
                     }
                   >
                     {({ isActive }) => (
@@ -154,7 +155,7 @@ export default function AdminSidebar({ open, onClose, onLogout }) {
                         {isActive && (
                           <motion.span
                             layoutId="admin-sidebar-active"
-                            className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 shadow-lg shadow-red-600/30"
+                            className="internal-nav-active"
                             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                           />
                         )}
@@ -168,9 +169,9 @@ export default function AdminSidebar({ open, onClose, onLogout }) {
           ))}
         </nav>
 
-        <div className="border-t border-white/10 p-4">
-          <div className="mb-3 flex items-center gap-3 rounded-xl bg-white/5 p-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-orange-500 text-sm font-bold text-white">
+        <div className="internal-sidebar-footer">
+          <div className="internal-user-card">
+            <div className="internal-user-avatar" style={{ background: '#f97316' }}>
               {initials}
             </div>
             <div className="min-w-0">

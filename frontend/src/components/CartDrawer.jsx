@@ -2,6 +2,13 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 
+const formatPrice = (value) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(value)
+
 export default function CartDrawer() {
   const { items, count, total, isOpen, setIsOpen, updateQty, removeItem } = useCart()
 
@@ -77,7 +84,7 @@ export default function CartDrawer() {
                           {item.name}
                         </h3>
                         <p className="mt-1 text-sm font-bold text-slate-900">
-                          ${item.price.toFixed(2)}
+                          {formatPrice(item.price)}
                         </p>
                         <div className="mt-auto flex items-center justify-between pt-2">
                           <div className="flex items-center gap-2 rounded-full border border-slate-300 px-2 py-1">
@@ -119,15 +126,15 @@ export default function CartDrawer() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-600">Subtotal</span>
                     <span className="text-xl font-bold text-slate-900">
-                      ${total.toFixed(2)}
+                      {formatPrice(total)}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-green-700">
-                    Free shipping on orders over $50.
+                  <p className="mt-1 text-xs text-emerald-700">
+                    Free delivery on eligible orders.
                   </p>
                   <button
                     type="button"
-                    className="mt-4 w-full rounded-full bg-orange-400 py-3 text-sm font-bold text-slate-900 transition hover:bg-orange-500"
+                    className="mt-4 w-full rounded-full bg-amber-400 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-500"
                   >
                     Proceed to Checkout
                   </button>

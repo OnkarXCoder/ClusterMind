@@ -20,7 +20,7 @@ export default function MarketingHeader({ onMenu }) {
   const current = NAV_ITEMS.find((n) =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
   )
-  const title = current?.label || 'Marketing & AI Dashboard'
+  const title = current?.label || 'Marketing & AI/ML Dashboard'
 
   useEffect(() => {
     const handler = (e) => {
@@ -46,7 +46,7 @@ export default function MarketingHeader({ onMenu }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/80 px-4 py-3.5 backdrop-blur-lg sm:gap-4 sm:px-6">
+    <header className="internal-header">
       <button
         onClick={onMenu}
         className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
@@ -55,17 +55,17 @@ export default function MarketingHeader({ onMenu }) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="min-w-0">
+      <div className="internal-header-title min-w-0">
         <h1 className="truncate text-lg font-bold text-slate-900">{title}</h1>
-        <p className="hidden text-xs text-slate-500 sm:block">Marketing & AI Console</p>
+        <p className="hidden text-xs text-slate-500 sm:block">Marketing + AI/ML Console</p>
       </div>
 
-      <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
+      <div className="internal-header-actions ml-auto flex items-center gap-2.5 sm:gap-3">
         <SearchBar
           value={search}
           onChange={setSearch}
           placeholder="Search..."
-          className="hidden w-44 md:block lg:w-64"
+          className="internal-header-search hidden w-44 md:block lg:w-64"
         />
 
         <DateRangePicker value={range} onChange={setRange} />

@@ -22,9 +22,7 @@ import {
   Sparkles,
   TrendingUp,
   Clock,
-  PackageCheck,
   RotateCcw,
-  Truck,
 } from 'lucide-react'
 import KpiCard from '../../components/marketing/KpiCard'
 import ChartCard from '../../components/marketing/ChartCard'

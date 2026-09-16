@@ -97,7 +97,7 @@ router.post('/login', async (req, res) => {
     const role = user ? 'customer' : admin ? 'admin' : 'marketing'
     const token = jwt.sign({ id: account._id, role }, JWT_SECRET, { expiresIn: '7d' })
 
-    res.json({
+    const response = {
       token,
       role,
       user: {
@@ -107,7 +107,13 @@ router.post('/login', async (req, res) => {
         contact: account.contact,
         role,
       },
-    })
+    }
+
+    if (role === 'marketing' && account.apiKey) {
+      response.apiKey = account.apiKey
+    }
+
+    res.json(response)
   } catch (err) {
     res.status(500).json({ message: 'Server error.', error: err.message })
   }

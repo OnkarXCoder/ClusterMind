@@ -14,7 +14,7 @@ import {
   Legend,
 } from 'recharts'
 import { useEffect, useState } from 'react'
-import { ShoppingCart, Wallet, Repeat, Eye, Search, Heart, TrendingUp } from 'lucide-react'
+import { ShoppingCart, Wallet, Repeat, Search, Heart, TrendingUp } from 'lucide-react'
 import KpiCard from '../../components/marketing/KpiCard'
 import ChartCard from '../../components/marketing/ChartCard'
 import { getAdminBehaviour } from '../../api'

@@ -5,6 +5,7 @@ import SearchBar from '../../components/marketing/SearchBar'
 import DateRangePicker from '../../components/marketing/DateRangePicker'
 import { ADMIN_NAV_ITEMS } from './AdminSidebar'
 import { ADMIN_NOTIFICATIONS, CURRENT_DATE_RANGE } from '../../data/adminMockData'
+import { getCurrentUser, logout } from '../../services/auth'
 
 export default function AdminHeader({ onMenu }) {
   const location = useLocation()
@@ -30,8 +31,8 @@ export default function AdminHeader({ onMenu }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const user = JSON.parse(localStorage.getItem('shopsmart_user') || '{}')
-  const name = user.name || 'Admin'
+  const user = getCurrentUser() || {}
+  const name = user.fullName || user.name || 'Admin'
   const initials = name
     .split(' ')
     .map((w) => w[0])
@@ -40,14 +41,12 @@ export default function AdminHeader({ onMenu }) {
     .toUpperCase()
 
   const handleLogout = () => {
-    localStorage.removeItem('shopsmart_token')
-    localStorage.removeItem('shopsmart_role')
-    localStorage.removeItem('shopsmart_user')
+    logout()
     navigate('/login')
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/80 px-4 py-3.5 backdrop-blur-lg sm:gap-4 sm:px-6">
+    <header className="internal-header">
       <button
         onClick={onMenu}
         className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
@@ -56,17 +55,17 @@ export default function AdminHeader({ onMenu }) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="min-w-0">
+      <div className="internal-header-title min-w-0">
         <h1 className="truncate text-lg font-bold text-slate-900">{title}</h1>
         <p className="hidden text-xs text-slate-500 sm:block">Administration Console</p>
       </div>
 
-      <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
+      <div className="internal-header-actions ml-auto flex items-center gap-2.5 sm:gap-3">
         <SearchBar
           value={search}
           onChange={setSearch}
           placeholder="Search..."
-          className="hidden w-44 md:block lg:w-64"
+          className="internal-header-search hidden w-44 md:block lg:w-64"
         />
 
         <DateRangePicker value={range} onChange={setRange} />

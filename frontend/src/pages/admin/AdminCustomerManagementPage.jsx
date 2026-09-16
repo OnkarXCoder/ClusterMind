@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Eye, Ban, CheckCircle, ShoppingCart, Search as SearchIcon, Heart, MessageSquare } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
-import DataTable from '../../components/marketing/DataTable'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import SearchBar from '../../components/marketing/SearchBar'
@@ -187,7 +186,7 @@ export default function AdminCustomerManagementPage() {
               <div className="space-y-2">
                 {CUSTOMER_SEARCH_HISTORY.map((s, i) => (
                   <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
-                    <span className="text-sm font-medium text-slate-700">"{s.query}"</span>
+                    <span className="text-sm font-medium text-slate-700">&quot;{s.query}&quot;</span>
                     <div className="flex items-center gap-3 text-xs text-slate-500">
                       <span>{s.results} results</span>
                       <span>{s.timestamp}</span>

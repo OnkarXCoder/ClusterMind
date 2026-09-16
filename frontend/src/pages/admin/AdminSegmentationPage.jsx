@@ -17,7 +17,6 @@ import KpiCard from '../../components/marketing/KpiCard'
 import ChartCard from '../../components/marketing/ChartCard'
 import DataTable from '../../components/marketing/DataTable'
 import Button from '../../components/marketing/Button'
-import StatusBadge from '../../components/marketing/StatusBadge'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminSegmentation } from '../../api'
 import { SEGMENTATION as MOCK_SEGMENTATION } from '../../data/adminMockData'
@@ -36,7 +35,7 @@ function SegmentDonut({ data }) {
             paddingAngle={2}
             strokeWidth={0}
           >
-            {data.segments.map((s, i) => (
+            {data.segments.map((s) => (
               <Cell key={s.name} fill={s.color} />
             ))}
           </Pie>
@@ -112,15 +111,16 @@ export default function AdminSegmentationPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {segmentation.segments.map((s, i) => {
+        {segmentation.segments.map((s) => {
           const accents = ['from-violet-600 to-purple-600', 'from-blue-600 to-cyan-500', 'from-cyan-500 to-teal-500', 'from-slate-400 to-slate-300', 'from-emerald-500 to-green-500']
+          const accent = accents[segmentation.segments.indexOf(s) % accents.length]
           return (
             <KpiCard
-              key={i}
+              key={s.name}
               label={s.name}
               value={s.customers.toLocaleString()}
               icon={Layers}
-              accent={accents[i]}
+              accent={accent}
               change={`${s.percentage}% of total`}
             />
           )

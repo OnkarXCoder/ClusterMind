@@ -5,36 +5,36 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 const slides = [
   {
     id: 1,
-    badge: 'Deal of the Day',
-    title: 'Up to 60% Off Electronics',
-    sub: 'Headphones, smart watches, TVs and more.',
+    badge: 'AI matched deals',
+    title: 'Premium Tech Deals',
+    sub: 'Save on laptops, phones, audio gear and connected essentials selected from live shopping patterns.',
     cta: 'Shop Electronics',
     category: 'Electronics',
-    image: 'https://picsum.photos/seed/deal1/600/600',
-    from: 'from-indigo-700',
-    to: 'to-purple-700',
+    image: '/products/macbook.jpg',
+    from: 'from-slate-950',
+    to: 'to-indigo-800',
   },
   {
     id: 2,
-    badge: 'New Season',
-    title: 'Fashion Sale — 50% Off',
-    sub: 'Trendy styles for everyone.',
+    badge: 'New season',
+    title: 'Fresh Fashion Finds',
+    sub: 'Curated styles, footwear and accessories for everyday confidence.',
     cta: 'Shop Fashion',
     category: 'Fashion',
-    image: 'https://picsum.photos/seed/deal2/600/600',
-    from: 'from-rose-600',
-    to: 'to-orange-500',
+    image: '/products/nike-shoes.jpg',
+    from: 'from-rose-700',
+    to: 'to-orange-600',
   },
   {
     id: 3,
-    badge: 'Best Prices',
-    title: 'Home & Kitchen Essentials',
-    sub: 'Everything to upgrade your home.',
+    badge: 'Home upgrade',
+    title: 'Kitchen Essentials',
+    sub: 'Appliances and home picks selected for smarter daily living.',
     cta: 'Shop Home',
-    category: 'Home',
-    image: 'https://picsum.photos/seed/deal3/600/600',
-    from: 'from-emerald-600',
-    to: 'to-teal-600',
+    category: 'Home & Kitchen',
+    image: '/products/mixer.jpg',
+    from: 'from-emerald-700',
+    to: 'to-teal-700',
   },
 ]
 
@@ -52,8 +52,8 @@ export default function HeroCarousel({ onShop }) {
   const slide = slides[index]
 
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-      <div className="relative h-64 overflow-hidden rounded-2xl sm:h-80 lg:h-96">
+    <section className="storefront-hero-wrap mx-auto max-w-7xl px-4 pt-7 sm:px-6 lg:px-8">
+      <div className="storefront-hero relative h-[23rem] overflow-hidden rounded-3xl sm:h-[27rem] lg:h-[30rem]">
         <AnimatePresence mode="wait">
           <motion.div
             key={slide.id}
@@ -61,20 +61,22 @@ export default function HeroCarousel({ onShop }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
-            className={`absolute inset-0 flex items-center bg-gradient-to-r ${slide.from} ${slide.to}`}
+            className={`storefront-hero-slide absolute inset-0 flex items-center bg-gradient-to-br ${slide.from} ${slide.to}`}
           >
-            <div className="relative z-10 max-w-md p-8 sm:p-12">
-              <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
+            <div className="storefront-hero-copy relative z-10 max-w-xl p-7 sm:p-12 lg:p-16">
+              <span className="inline-flex rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[.14em] text-white backdrop-blur-sm">
                 {slide.badge}
               </span>
-              <h2 className="mt-4 text-2xl font-extrabold leading-tight text-white sm:text-4xl">
+              <h2 className="mt-5 max-w-lg text-3xl font-black leading-[1.04] tracking-tight text-white sm:text-5xl lg:text-6xl">
                 {slide.title}
               </h2>
-              <p className="mt-3 text-sm text-white/80 sm:text-base">{slide.sub}</p>
+              <p className="mt-4 max-w-md text-sm leading-6 text-white/80 sm:text-base">
+                {slide.sub}
+              </p>
               <button
                 type="button"
                 onClick={() => onShop(slide.category)}
-                className="mt-6 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition hover:bg-slate-100"
+                className="mt-7 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-slate-950 shadow-xl shadow-black/20 transition hover:-translate-y-0.5 hover:bg-amber-50"
               >
                 {slide.cta}
               </button>
@@ -82,7 +84,7 @@ export default function HeroCarousel({ onShop }) {
             <img
               src={slide.image}
               alt={slide.title}
-              className="pointer-events-none absolute right-0 top-0 h-full w-1/2 object-cover opacity-80"
+              className="storefront-hero-image pointer-events-none absolute right-0 top-0 h-full w-[58%] object-cover opacity-95"
             />
           </motion.div>
         </AnimatePresence>

@@ -17,6 +17,7 @@ import recommendationRoutes from './routes/recommendations.js'
 import userRoutes from './routes/users.js'
 import adminRoutes from './routes/admin.js'
 import marketingRoutes from './routes/marketing.js'
+import mlRoutes from './routes/ml.js'
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -42,6 +43,7 @@ app.use('/api/recommendations', recommendationRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/marketing', marketingRoutes)
+app.use('/api/ml', mlRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' })

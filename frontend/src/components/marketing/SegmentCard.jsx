@@ -4,7 +4,7 @@ export default function SegmentCard({ segment, selected, onSelect }) {
   return (
     <button
       onClick={onSelect}
-      className={`relative w-full rounded-2xl border-2 p-5 text-left transition ${
+      className={`dashboard-segment-card relative w-full rounded-2xl border-2 p-5 text-left transition ${
         selected
           ? 'border-violet-500 bg-violet-50 shadow-lg shadow-violet-500/10'
           : 'border-slate-200 bg-white hover:border-violet-300 hover:shadow-md'

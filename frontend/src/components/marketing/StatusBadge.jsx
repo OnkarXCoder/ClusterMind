@@ -13,7 +13,7 @@ const STYLES = {
 export default function StatusBadge({ status }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+      className={`status-badge inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
         STYLES[status] || 'bg-slate-100 text-slate-600'
       }`}
     >

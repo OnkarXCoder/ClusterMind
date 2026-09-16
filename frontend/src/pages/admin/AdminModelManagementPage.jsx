@@ -3,7 +3,6 @@ import { Database, Cpu, Play, BarChart3, Eye, RefreshCw } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
-import Modal from '../../components/marketing/Modal'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminMlModels } from '../../api'
 import { MODELS as MOCK_ML_MODELS, DATASET } from '../../data/marketingMockData'
@@ -12,7 +11,6 @@ import { PREDICTION_LOGS as MOCK_PREDICTION_LOGS } from '../../data/adminMockDat
 export default function AdminModelManagementPage() {
   const { show } = useToast()
   const [activeTab, setActiveTab] = useState('models')
-  const [viewLog, setViewLog] = useState(null)
   const [models, setModels] = useState(MOCK_ML_MODELS)
   const [predictionLogs, setPredictionLogs] = useState(MOCK_PREDICTION_LOGS)
 

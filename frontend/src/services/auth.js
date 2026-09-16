@@ -19,6 +19,7 @@ export const getCurrentUser = () => {
 export const logout = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem("marketing_api_key");
 };
 
 const DEFAULT_USERS = [
@@ -70,6 +71,7 @@ const localLogin = ({ email, password }) =>
         return;
       }
       const token = "fake-jwt-" + Date.now();
+      localStorage.removeItem("marketing_api_key");
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       resolve(user);
@@ -108,8 +110,13 @@ export const fakeLogin = async ({ email, identifier, password }) => {
   if (await isBackendReachable()) {
     try {
       const res = await api.post("/auth/login", { identifier: id, password });
-      const { token, user } = res.data;
+      const { token, user, apiKey } = res.data;
       localStorage.setItem(TOKEN_KEY, token);
+      if (apiKey) {
+        localStorage.setItem("marketing_api_key", apiKey);
+      } else {
+        localStorage.removeItem("marketing_api_key");
+      }
       localStorage.setItem(
         USER_KEY,
         JSON.stringify({
@@ -125,7 +132,8 @@ export const fakeLogin = async ({ email, identifier, password }) => {
       const message =
         err?.response?.data?.message ||
         (err?.response?.status === 401 ? "Invalid email or password" : null);
-      if (message) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 404) {
         throw { contact: message };
       }
     }

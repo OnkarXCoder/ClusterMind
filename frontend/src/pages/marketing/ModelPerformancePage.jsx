@@ -1,14 +1,38 @@
+import { useEffect, useState } from 'react'
 import { Cpu, RefreshCw, GitCompareArrows, Layers } from 'lucide-react'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import { useToast } from '../../components/marketing/Toast'
 import { MODELS } from '../../data/marketingMockData'
+import { getModels, trainModel } from '../../api'
 
 export default function ModelPerformancePage() {
   const { show } = useToast()
+  const [models, setModels] = useState(MODELS)
 
-  const handleRetrain = (name) => {
-    show(`${name} training queued (frontend demo only).`, 'success')
+  const loadModels = async () => {
+    const live = await getModels()
+    if (live) setModels(live)
+  }
+
+  useEffect(() => {
+    loadModels()
+  }, [])
+
+  const handleRetrain = async (name) => {
+    const key = name.toLowerCase().includes('dbscan')
+      ? 'dbscan'
+      : name.toLowerCase().includes('hierarchical')
+        ? 'hierarchical'
+        : name.toLowerCase().includes('pca')
+          ? 'pca'
+          : 'kmeans'
+    const trained = await trainModel(key)
+    await loadModels()
+    show(
+      trained ? `${name} trained from the active dataset.` : 'Unable to train model. Restore or upload a dataset first.',
+      trained ? 'success' : 'error',
+    )
   }
 
   const handleCompare = () => {
@@ -33,7 +57,7 @@ export default function ModelPerformancePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {MODELS.map((model) => {
+        {models.map((model) => {
           const isActive = model.status === 'Active'
           return (
             <div

@@ -40,8 +40,8 @@ export default function DateRangePicker({ value, onChange }) {
         className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:border-violet-300"
       >
         <CalendarDays className="h-4 w-4 text-slate-400" />
-        <span className="hidden md:inline">{label}</span>
-        <span className="md:hidden">Range</span>
+        <span className="hidden xl:inline">{label}</span>
+        <span className="xl:hidden">Range</span>
         <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
       </button>
 

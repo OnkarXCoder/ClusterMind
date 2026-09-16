@@ -9,8 +9,9 @@ export default function MarketingLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const role = getCurrentUser()?.role
 
-  if (!isAuthenticated() || getCurrentUser()?.role !== 'marketing') {
+  if (!isAuthenticated() || !['marketing', 'aiml'].includes(role)) {
     return <Navigate to="/login" replace />
   }
 
@@ -20,21 +21,21 @@ export default function MarketingLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="internal-shell">
       <MarketingSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
       />
 
-      <div className="lg:pl-72">
+      <div className="internal-main">
         <MarketingHeader onMenu={() => setSidebarOpen(true)} />
         <motion.main
           key={location.pathname}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="p-4 sm:p-6"
+          className="internal-content"
         >
           <Outlet />
         </motion.main>

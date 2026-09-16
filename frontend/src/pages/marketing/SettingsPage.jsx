@@ -57,7 +57,7 @@ export default function SettingsPage() {
 
   const handleSave = (e) => {
     e.preventDefault()
-    show('Settings saved (frontend demo ΓÇö backend persistence coming later).', 'success')
+    show('Settings saved. Backend persistence is not implemented yet.', 'success')
   }
 
   return (

@@ -9,7 +9,9 @@ box-sizing:border-box;
 }
 
 body{
-background:var(--background);
+background:
+radial-gradient(circle at 8% 0%, rgba(99,102,241,.10), transparent 28rem),
+var(--background);
 font-family:Inter,sans-serif;
 color:var(--text);
 -webkit-font-smoothing:antialiased;
@@ -27,6 +29,11 @@ color:inherit;
 button{
 cursor:pointer;
 font-family:inherit;
+}
+
+::selection{
+background:#c7d2fe;
+color:#1e1b4b;
 }
 
 img{

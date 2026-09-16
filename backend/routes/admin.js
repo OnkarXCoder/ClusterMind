@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { verifyToken, requireRole } from '../middleware/auth.js'
 import AdminCustomer from '../models/AdminCustomer.js'
 import AdminOrder from '../models/AdminOrder.js'
 import AdminCampaign from '../models/AdminCampaign.js'
@@ -19,6 +20,8 @@ import {
 } from '../data/adminData.js'
 
 const router = Router()
+
+router.use(verifyToken, requireRole('admin'))
 
 const asyncHandler = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next)
@@ -167,16 +170,118 @@ router.get(
         stock: p.stock ?? 0,
         rating: p.rating ?? 0,
         reviews: p.reviews ?? 0,
+        discount: p.discount ?? 0,
+        oldPrice: p.oldPrice,
         status:
           (p.stock ?? 0) === 0
             ? 'Out of Stock'
             : (p.stock ?? 0) < 15
               ? 'Low Stock'
               : 'Active',
-        image: 'Product',
+        image: p.image,
+        giftTags: p.giftTags || [],
         sku: `P${String(i + 1).padStart(4, '0')}`,
       }))
     )
+  })
+)
+
+router.post(
+  '/products',
+  asyncHandler(async (req, res) => {
+    const {
+      name,
+      description = '',
+      category,
+      brand = 'Generic',
+      price,
+      oldPrice,
+      discount = 0,
+      rating = 0,
+      reviews = 0,
+      stock = 0,
+      image = '/products/books.jpg',
+      giftTags = [],
+      aiRecommended = false,
+      freeDelivery = true,
+    } = req.body
+
+    if (!name || !category || price === undefined || price === '') {
+      return res.status(400).json({ message: 'name, category and price are required' })
+    }
+
+    const product = await Product.create({
+      name,
+      description,
+      category,
+      brand,
+      price: Number(price),
+      oldPrice: oldPrice === '' || oldPrice === undefined ? undefined : Number(oldPrice),
+      discount: Number(discount) || 0,
+      rating: Number(rating) || 0,
+      reviews: Number(reviews) || 0,
+      stock: Number(stock) || 0,
+      image,
+      giftTags: Array.isArray(giftTags)
+        ? giftTags.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean)
+        : String(giftTags).split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean),
+      aiRecommended: Boolean(aiRecommended),
+      freeDelivery: Boolean(freeDelivery),
+    })
+
+    await ActivityLog.create({
+      user: 'Admin',
+      action: `Added product ${product.name}`,
+      timestamp: new Date().toLocaleString('en-IN'),
+    })
+
+    res.status(201).json({
+      id: product._id,
+      name: product.name,
+      category: product.category,
+      brand: product.brand,
+      price: product.price,
+      stock: product.stock,
+      rating: product.rating,
+      reviews: product.reviews,
+      status: product.stock === 0 ? 'Out of Stock' : product.stock < 15 ? 'Low Stock' : 'Active',
+      image: product.image,
+      giftTags: product.giftTags,
+    })
+  })
+)
+
+router.patch(
+  '/products/:id',
+  asyncHandler(async (req, res) => {
+    const update = { ...req.body }
+    for (const key of ['price', 'oldPrice', 'discount', 'rating', 'reviews', 'stock']) {
+      if (update[key] !== undefined && update[key] !== '') update[key] = Number(update[key])
+      if (update[key] === '') delete update[key]
+    }
+    if (update.giftTags && !Array.isArray(update.giftTags)) {
+      update.giftTags = String(update.giftTags).split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean)
+    }
+    const product = await Product.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+      runValidators: true,
+    }).lean()
+    if (!product) return res.status(404).json({ message: 'Product not found' })
+    res.json(product)
+  })
+)
+
+router.delete(
+  '/products/:id',
+  asyncHandler(async (req, res) => {
+    const product = await Product.findByIdAndDelete(req.params.id).lean()
+    if (!product) return res.status(404).json({ message: 'Product not found' })
+    await ActivityLog.create({
+      user: 'Admin',
+      action: `Deleted product ${product.name}`,
+      timestamp: new Date().toLocaleString('en-IN'),
+    })
+    res.json({ message: 'Product deleted', id: req.params.id })
   })
 )
 

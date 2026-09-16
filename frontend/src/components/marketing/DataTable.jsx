@@ -1,7 +1,7 @@
 export default function DataTable({ columns, rows, renderRow, emptyMessage = 'No records found' }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
+    <div className="dashboard-table-wrap overflow-x-auto">
+      <table className="dashboard-table w-full text-left text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             {columns.map((col) => (

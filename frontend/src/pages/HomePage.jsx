@@ -1,16 +1,21 @@
 import { useMemo, useState } from 'react'
 import Header from '../components/Header'
 import HeroCarousel from '../components/HeroCarousel'
+import StorefrontHighlights from '../components/StorefrontHighlights'
+import GiftFinder from '../components/GiftFinder'
+import { giftRecipients, matchesGiftRecipient } from '../components/giftRules'
 import CategoryGrid from '../components/CategoryGrid'
 import ProductGrid from '../components/ProductGrid'
 import CartDrawer from '../components/CartDrawer'
 import Footer from '../components/Footer'
 import { products } from '../data/products'
+import './HomePage.css'
 
 export default function HomePage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [sort, setSort] = useState('featured')
+  const [giftRecipient, setGiftRecipient] = useState('')
 
   const scrollToProducts = () => {
     document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })
@@ -30,6 +35,7 @@ export default function HomePage() {
     let list = products.filter(
       (p) =>
         (category === 'All' || p.category === category) &&
+        matchesGiftRecipient(p, giftRecipient) &&
         p.name.toLowerCase().includes(search.toLowerCase())
     )
     switch (sort) {
@@ -46,18 +52,23 @@ export default function HomePage() {
         break
     }
     return list
-  }, [category, search, sort])
+  }, [category, giftRecipient, search, sort])
 
+  const recipientLabel = giftRecipients.find((item) => item.key === giftRecipient)?.label
   const heading =
-    search || category !== 'All'
+    giftRecipient
+      ? `Gift Ideas for ${recipientLabel}`
+      : search || category !== 'All'
       ? 'Search Results'
       : 'Recommended for You'
 
   return (
-    <div id="top" className="min-h-screen bg-slate-100 text-slate-900">
-      <Header search={search} onSearchChange={setSearch} />
+    <div id="top" className="storefront min-h-screen text-slate-900">
+      <Header search={search} onSearchChange={setSearch} onCategorySelect={handleCategorySelect} />
       <main>
         <HeroCarousel onShop={handleShop} />
+        <StorefrontHighlights />
+        <GiftFinder products={products} selected={giftRecipient} onSelect={setGiftRecipient} />
         <CategoryGrid onSelect={handleCategorySelect} />
         <ProductGrid
           heading={heading}

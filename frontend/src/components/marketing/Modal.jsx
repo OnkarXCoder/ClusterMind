@@ -24,7 +24,7 @@ export default function Modal({ open, onClose, title, subtitle, children, footer
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: 0.2 }}
-            className={`relative w-full ${widths[size]} max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl`}
+            className={`dashboard-modal relative w-full ${widths[size]} max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl`}
           >
             <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
               <div>

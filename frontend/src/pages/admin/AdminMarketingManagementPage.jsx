@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Megaphone, Plus, Eye, Trash2, CalendarDays, TrendingUp } from 'lucide-react'
+import { Plus, Eye, Trash2, CalendarDays, TrendingUp } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
