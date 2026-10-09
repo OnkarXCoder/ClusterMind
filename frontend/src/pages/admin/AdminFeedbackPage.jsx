@@ -4,20 +4,26 @@ import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import SearchBar from '../../components/marketing/SearchBar'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminFeedback, updateAdminFeedbackStatus } from '../../api'
-import { FEEDBACK_DATA as MOCK_FEEDBACK_DATA } from '../../data/adminMockData'
 
 export default function AdminFeedbackPage() {
   const { show } = useToast()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
-  const [feedbacks, setFeedbacks] = useState(MOCK_FEEDBACK_DATA)
+  const [feedbacks, setFeedbacks] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const load = () => {
-    getAdminFeedback().then((res) => {
-      if (res) setFeedbacks(res.map((f) => ({ ...f, id: f._id ?? f.id })))
-    })
+    setLoading(true)
+    getAdminFeedback()
+      .then((res) => {
+        if (Array.isArray(res)) setFeedbacks(res.map((f) => ({ ...f, id: f._id ?? f.id })))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }
 
   useEffect(load, [])
@@ -27,8 +33,8 @@ export default function AdminFeedbackPage() {
   const filtered = feedbacks.filter(
     (f) =>
       (typeFilter === 'All' || f.type === typeFilter) &&
-      (f.customer.toLowerCase().includes(search.toLowerCase()) ||
-        f.content.toLowerCase().includes(search.toLowerCase())),
+      (String(f.customer || '').toLowerCase().includes(search.toLowerCase()) ||
+        String(f.content || '').toLowerCase().includes(search.toLowerCase())),
   )
 
   const resolve = async (f) => {
@@ -66,16 +72,16 @@ export default function AdminFeedbackPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon green"><MessageSquare size={24} /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Feedback Management</h2>
-          <p className="text-sm text-slate-500">Reviews, complaints, suggestions, and support tickets</p>
+          <h2 className="dm-hero-title">Feedback Management</h2>
+          <p className="dm-hero-sub">Reviews, complaints, suggestions, and support tickets</p>
         </div>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search feedback..." className="w-64" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="dm-grid-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Total Feedback</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">{stats.total}</p>
@@ -92,29 +98,30 @@ export default function AdminFeedbackPage() {
           <p className="text-sm text-slate-500">Open Issues</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">{stats.open}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Avg Rating</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">⭐ {stats.avgRating}</p>
-        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search feedback..." className="w-64" />
+      </div>
+
+      <div className="dm-tabs" style={{ flexWrap: 'wrap' }}>
         {types.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTypeFilter(t)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              typeFilter === t
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
-            }`}
-          >
+          <button key={t} onClick={() => setTypeFilter(t)} className={`dm-tab ${typeFilter === t ? 'active' : ''}`}>
             {t}
           </button>
         ))}
       </div>
 
+      {loading ? (
+        <LoadingState label="Loading feedback..." />
+      ) : (
       <ChartCard title="Feedback & Support" subtitle={`Showing ${filtered.length} items`}>
+        {feedbacks.length === 0 ? (
+          <EmptyState
+            title="No feedback"
+            description="No feedback, reviews, or support tickets are available yet."
+          />
+        ) : (
         <div className="space-y-3">
           {filtered.map((f) => {
             const Icon = typeIcons[f.type] || MessageSquare
@@ -149,7 +156,9 @@ export default function AdminFeedbackPage() {
             )
           })}
         </div>
+        )}
       </ChartCard>
+      )}
     </div>
   )
 }

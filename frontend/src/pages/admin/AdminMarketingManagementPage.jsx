@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Plus, Eye, Trash2, CalendarDays, TrendingUp } from 'lucide-react'
+import { Plus, Eye, Trash2, CalendarDays, TrendingUp, Megaphone } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import SearchBar from '../../components/marketing/SearchBar'
 import Modal from '../../components/marketing/Modal'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminCampaigns, createAdminCampaign } from '../../api'
-import { MARKETING_CAMPAIGNS as MOCK_MARKETING_CAMPAIGNS } from '../../data/adminMockData'
 
 export default function AdminMarketingManagementPage() {
   const { show } = useToast()
@@ -16,12 +17,17 @@ export default function AdminMarketingManagementPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [viewCampaign, setViewCampaign] = useState(null)
   const [form, setForm] = useState({ name: '', segment: '', channel: '', type: '', startDate: '', endDate: '', budget: '' })
-  const [campaigns, setCampaigns] = useState(MOCK_MARKETING_CAMPAIGNS)
+  const [campaigns, setCampaigns] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const load = () => {
-    getAdminCampaigns().then((res) => {
-      if (res) setCampaigns(res.map((c) => ({ ...c, id: c.campaignId ?? c.id })))
-    })
+    setLoading(true)
+    getAdminCampaigns()
+      .then((res) => {
+        if (Array.isArray(res)) setCampaigns(res.map((c) => ({ ...c, id: c.campaignId ?? c.id })))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }
 
   useEffect(load, [])
@@ -31,8 +37,8 @@ export default function AdminMarketingManagementPage() {
   const filtered = campaigns.filter(
     (c) =>
       (statusFilter === 'All' || c.status === statusFilter) &&
-      (c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.segment.toLowerCase().includes(search.toLowerCase())),
+      (String(c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        String(c.segment || '').toLowerCase().includes(search.toLowerCase())),
   )
 
   const handleCreate = async () => {
@@ -52,89 +58,93 @@ export default function AdminMarketingManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon red"><Megaphone size={24} /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Marketing Management</h2>
-          <p className="text-sm text-slate-500">{campaigns.length} campaigns total</p>
+          <h2 className="dm-hero-title">Marketing Management</h2>
+          <p className="dm-hero-sub">{campaigns.length} campaigns total</p>
         </div>
-        <div className="flex items-center gap-3">
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div className="dm-tabs" style={{ flexWrap: 'wrap' }}>
+          {statuses.map((s) => (
+            <button key={s} onClick={() => setStatusFilter(s)} className={`dm-tab ${statusFilter === s ? 'active' : ''}`}>
+              {s}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <SearchBar value={search} onChange={setSearch} placeholder="Search campaigns..." className="w-64" />
           <Button icon={Plus} onClick={() => setShowCreate(true)}>Create Campaign</Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {statuses.map((s) => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              statusFilter === s
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
-      <ChartCard title="Campaigns" subtitle={`Showing ${filtered.length} campaigns`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Campaign</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Segment</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Channel</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Type</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Duration</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Budget</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Performance</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Status</th>
-                <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((c) => (
-                <tr key={c.id} className="transition hover:bg-slate-50">
-                  <td className="px-5 py-4 font-semibold text-slate-900">{c.name}</td>
-                  <td className="px-5 py-4 text-slate-600">{c.segment}</td>
-                  <td className="px-5 py-4 text-slate-600">{c.channel}</td>
-                  <td className="px-5 py-4 text-slate-600">{c.type}</td>
-                  <td className="px-5 py-4">
-                    <span className="flex items-center gap-1.5 text-slate-600">
-                      <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                      {c.startDate} - {c.endDate}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 font-semibold text-slate-900">₹{c.budget.toLocaleString()}</td>
-                  <td className="px-5 py-4">
-                    {c.performance ? (
-                      <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-                        <TrendingUp className="h-4 w-4 text-emerald-500" />
-                        {c.performance}%
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4"><StatusBadge status={c.status} /></td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <Button variant="ghost" size="sm" icon={Eye} onClick={() => setViewCampaign(c)}>View</Button>
-                      <button onClick={() => show(`Deleted "${c.name}" (demo)`, 'success')} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </ChartCard>
+      {loading ? (
+        <LoadingState label="Loading campaigns..." />
+      ) : (
+        <ChartCard title="Campaigns" subtitle={`Showing ${filtered.length} campaigns`}>
+          {campaigns.length === 0 ? (
+            <EmptyState
+              title="No campaigns"
+              description="No marketing campaigns are available yet."
+            />
+          ) : (
+            <div className="dm-table-wrap">
+              <table className="dm-table">
+                <thead>
+                  <tr>
+                    <th>Campaign</th>
+                    <th>Segment</th>
+                    <th>Channel</th>
+                    <th>Type</th>
+                    <th>Duration</th>
+                    <th>Budget</th>
+                    <th>Performance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => (
+                    <tr key={c.id}>
+                      <td style={{ fontWeight: 700 }}>{c.name}</td>
+                      <td>{c.segment}</td>
+                      <td>{c.channel}</td>
+                      <td>{c.type}</td>
+                      <td>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <CalendarDays size={14} />
+                          {c.startDate} - {c.endDate}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 700 }}>₹{Number(c.budget || 0).toLocaleString()}</td>
+                      <td>
+                        {c.performance ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                            <TrendingUp size={14} style={{ color: '#10B981' }} />
+                            {c.performance}%
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td><StatusBadge status={c.status} /></td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <Button variant="ghost" size="sm" icon={Eye} onClick={() => setViewCampaign(c)}>View</Button>
+                          <button onClick={() => show(`Deleted "${c.name}" (demo)`, 'success')} style={{ padding: 6, borderRadius: 8, border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </ChartCard>
+      )}
 
       <Modal
         open={showCreate}

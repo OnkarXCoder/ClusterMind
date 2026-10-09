@@ -13,13 +13,25 @@ router.get('/', verifyToken, requireRole('admin', 'marketing'), async (req, res)
   }
 })
 
-router.get('/available', verifyToken, async (req, res) => {
+router.get('/available', async (req, res) => {
   try {
+    let customerId = null
+    const header = req.headers.authorization || ''
+    const token = header.startsWith('Bearer ') ? header.slice(7) : null
+    if (token) {
+      try {
+        const decoded = (await import('jsonwebtoken')).default.verify(
+          token,
+          process.env.JWT_SECRET || 'shopsmart-dev-secret'
+        )
+        customerId = decoded?.id || null
+      } catch {}
+    }
     const filter = {
       used: false,
-      $or: [{ customerId: null }, { customerId: req.user.id }],
+      $or: [{ customerId: null }, ...(customerId ? [{ customerId }] : [])],
     }
-    const coupons = await Coupon.find(filter).lean()
+    const coupons = await Coupon.find(filter).sort({ createdAt: -1 }).lean()
     res.json({ coupons })
   } catch (err) {
     res.status(500).json({ message: 'Server error.', error: err.message })

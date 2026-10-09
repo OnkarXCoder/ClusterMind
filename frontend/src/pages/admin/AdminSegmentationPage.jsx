@@ -18,8 +18,16 @@ import ChartCard from '../../components/marketing/ChartCard'
 import DataTable from '../../components/marketing/DataTable'
 import Button from '../../components/marketing/Button'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminSegmentation } from '../../api'
-import { SEGMENTATION as MOCK_SEGMENTATION } from '../../data/adminMockData'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
+import { getSegments, syncCustomerDataset, trainModel } from '../../api'
+
+const CLUSTERING_MODELS = [
+  { key: 'kmeans', name: 'K-Means Clustering' },
+  { key: 'dbscan', name: 'DBSCAN' },
+  { key: 'hierarchical', name: 'Hierarchical Clustering' },
+  { key: 'pca', name: 'PCA-Based Clustering' },
+]
 
 function SegmentDonut({ data }) {
   return (
@@ -81,13 +89,32 @@ function ClusterScatter({ data }) {
 
 export default function AdminSegmentationPage() {
   const { show } = useToast()
-  const [segmentation, setSegmentation] = useState(MOCK_SEGMENTATION)
+  const [segmentation, setSegmentation] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState(() => localStorage.getItem('clustermind_admin_clustering_model') || 'kmeans')
+  const [clusterCount, setClusterCount] = useState(5)
 
   useEffect(() => {
-    getAdminSegmentation().then((res) => {
-      if (res) setSegmentation({ ...res, clusters: res.clusters ?? MOCK_SEGMENTATION.clusters })
-    })
-  }, [])
+    localStorage.setItem('clustermind_admin_clustering_model', selectedAlgorithm)
+    setLoading(true)
+    getSegments({ algorithm: selectedAlgorithm, clusters: clusterCount })
+      .then((res) => {
+        if (res) setSegmentation(res)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [selectedAlgorithm, clusterCount])
+
+  const runSegmentation = async () => {
+    await syncCustomerDataset()
+    const trained = await trainModel(selectedAlgorithm, clusterCount)
+    const live = await getSegments({ algorithm: selectedAlgorithm, clusters: clusterCount })
+    if (live) setSegmentation(live)
+    show(
+      trained ? `${trained.name} segmentation completed for ${trained.rows} customers.` : 'Unable to run segmentation. Check customer data and backend auth.',
+      trained ? 'success' : 'error',
+    )
+  }
 
   const columns = [
     { key: 'name', label: 'Segment' },
@@ -98,19 +125,66 @@ export default function AdminSegmentationPage() {
     { key: 'type', label: 'Type' },
   ]
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Customer Segmentation</h2>
-          <p className="text-sm text-slate-500">AI-powered K-Means clustering analysis</p>
+  if (loading || !segmentation?.segments?.length) {
+    return (
+      <div className="dm-page">
+        <div className="dm-hero">
+          <div className="dm-hero-icon purple"><Layers size={24} /></div>
+          <div>
+            <h2 className="dm-hero-title">Customer Segmentation</h2>
+            <p className="dm-hero-sub">AI-powered clustering analysis with configurable models</p>
+          </div>
         </div>
-        <Button icon={Play} onClick={() => show('Segmentation queued (frontend demo)', 'success')}>
+        {loading ? (
+          <LoadingState label="Running segmentation..." />
+        ) : (
+          <EmptyState title="No segmentation data" description="Run segmentation to generate customer clusters from live data." />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon purple"><Layers size={24} /></div>
+        <div>
+          <h2 className="dm-hero-title">Customer Segmentation</h2>
+          <p className="dm-hero-sub">AI-powered clustering analysis with configurable models</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-end justify-end gap-3">
+        <label className="min-w-56 text-xs font-bold uppercase text-slate-500">
+          Model
+          <select
+            className="dm-select mt-1"
+            value={selectedAlgorithm}
+            onChange={(e) => setSelectedAlgorithm(e.target.value)}
+          >
+            {CLUSTERING_MODELS.map((model) => (
+              <option key={model.key} value={model.key}>{model.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="w-36 text-xs font-bold uppercase text-slate-500">
+          Clusters
+          <input
+            className="dm-input mt-1"
+            type="number"
+            min="2"
+            max="12"
+            value={clusterCount}
+            disabled={selectedAlgorithm === 'dbscan'}
+            onChange={(e) => setClusterCount(Number(e.target.value) || 2)}
+          />
+        </label>
+        <Button icon={Play} onClick={runSegmentation}>
           Run Segmentation
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="dm-grid-4">
         {segmentation.segments.map((s) => {
           const accents = ['from-violet-600 to-purple-600', 'from-blue-600 to-cyan-500', 'from-cyan-500 to-teal-500', 'from-slate-400 to-slate-300', 'from-emerald-500 to-green-500']
           const accent = accents[segmentation.segments.indexOf(s) % accents.length]
@@ -127,11 +201,11 @@ export default function AdminSegmentationPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="dm-grid-2">
         <ChartCard title="Segment Distribution" subtitle="Customer distribution across segments">
           <SegmentDonut data={segmentation} />
         </ChartCard>
-        <ChartCard title="Cluster Visualization" subtitle="K-Means cluster scatter plot">
+        <ChartCard title="Cluster Visualization" subtitle={`${segmentation.model?.name || CLUSTERING_MODELS.find((m) => m.key === selectedAlgorithm)?.name} scatter plot`}>
           <ClusterScatter data={segmentation} />
         </ChartCard>
       </div>

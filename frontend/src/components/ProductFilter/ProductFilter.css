@@ -1,12 +1,15 @@
 .filter-panel{
 
-background:#fff;
+background:rgba(255,255,255,.9);
 
 padding:20px;
 
-border-radius:18px;
+border:1px solid rgba(226,232,240,.9);
 
-box-shadow:0 8px 20px rgba(0,0,0,.06);
+border-radius:22px;
+
+box-shadow:0 20px 48px rgba(15,23,42,.08);
+backdrop-filter:blur(16px);
 
 position:sticky;
 
@@ -31,6 +34,7 @@ margin-bottom:15px;
 font-family:Poppins;
 
 font-size:20px;
+letter-spacing:0;
 
 }
 
@@ -48,6 +52,10 @@ font-weight:600;
 
 cursor:pointer;
 
+}
+
+.clear-filters:hover{
+color:#0891b2;
 }
 
 .filter-group{
@@ -74,7 +82,9 @@ align-items:center;
 
 gap:10px;
 
-padding:7px 0;
+padding:9px 10px;
+
+border-radius:12px;
 
 font-size:14px;
 
@@ -82,6 +92,11 @@ cursor:pointer;
 
 color:#374151;
 
+}
+
+.filter-option:hover{
+background:#f8fafc;
+color:#111827;
 }
 
 .filter-option input{

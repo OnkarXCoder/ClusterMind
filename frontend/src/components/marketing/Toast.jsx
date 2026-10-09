@@ -1,8 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 
-const ToastContext = createContext(null)
+const ToastContext =
+  globalThis.__shopsmartToastContext || (globalThis.__shopsmartToastContext = createContext(null))
 
 const ICONS = {
   success: { Icon: CheckCircle2, style: 'text-emerald-500' },
@@ -24,7 +26,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-80 flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
         <AnimatePresence>
           {toasts.map((toast) => {
             const { Icon, style } = ICONS[toast.type] || ICONS.info
@@ -56,6 +58,10 @@ export function ToastProvider({ children }) {
 
 export function useToast() {
   const context = useContext(ToastContext)
-  if (!context) throw new Error('useToast must be used within ToastProvider')
-  return { show: context }
+  const fallback = useCallback((message, type = 'info') => {
+    const log = type === 'error' ? console.error : console.info
+    log(`[toast:${type}] ${message}`)
+  }, [])
+
+  return { show: context || fallback }
 }

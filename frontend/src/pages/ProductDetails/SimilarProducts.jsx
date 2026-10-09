@@ -1,10 +1,21 @@
 import { Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 import ProductCard from "../../components/ProductCard/ProductCard";
 import { getSimilarProducts } from "../../services/products";
 import "./ProductDetails.css";
 
 export default function SimilarProducts({ product }) {
-  const similar = getSimilarProducts(product);
+  const [similar, setSimilar] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSimilarProducts(product).then((items) => {
+      if (!cancelled) setSimilar(Array.isArray(items) ? items : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [product]);
 
   return (
     <div className="similar-section">

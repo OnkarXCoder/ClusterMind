@@ -15,7 +15,7 @@ import {
 import { addToCart } from "../../services/cart";
 import "./WishlistCard.css";
 
-const fmt = (n) => n.toLocaleString("en-IN");
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
 
 export default function WishlistCard({ product }) {
   const [inList, setInList] = useState(isInWishlist(product.id));

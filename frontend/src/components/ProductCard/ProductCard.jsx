@@ -5,31 +5,47 @@ import { addToCart } from "../../services/cart";
 import { addToWishlist, removeFromWishlist } from "../../services/wishlist";
 import "./ProductCard.css";
 
+const formatNumber = (value) => Number(value || 0).toLocaleString("en-IN");
+
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
   const [added, setAdded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const safeProduct = {
+    id: product?.id || product?._id || "",
+    name: product?.name || "Unnamed Product",
+    category: product?.category || "General",
+    image: product?.image || product?.thumbnail || "",
+    price: Number(product?.price || 0),
+    oldPrice: Number(product?.oldPrice ?? product?.price ?? 0),
+    discount: Number(product?.discount || 0),
+    rating: Number(product?.rating || 0),
+    reviews: Number(product?.reviews || 0),
+    aiRecommended: Boolean(product?.aiRecommended),
+    freeDelivery: product?.freeDelivery ?? true,
+    inStock: product?.inStock ?? Number(product?.stock || 0) > 0,
+  };
 
   const handleAdd = () => {
-    if (!product.inStock) return;
-    addToCart(product);
+    if (!safeProduct.inStock) return;
+    addToCart({ ...product, ...safeProduct });
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
 
   const handleBuyNow = () => {
-    if (!product.inStock) return;
-    addToCart(product, 1);
+    if (!safeProduct.inStock) return;
+    addToCart({ ...product, ...safeProduct }, 1);
     navigate("/checkout");
   };
 
   const toggleWishlist = () => {
     if (liked) {
-      removeFromWishlist(product.id);
+      removeFromWishlist(safeProduct.id);
       setLiked(false);
     } else {
-      addToWishlist(product);
+      addToWishlist({ ...product, ...safeProduct });
       setLiked(true);
     }
   };
@@ -37,7 +53,7 @@ export default function ProductCard({ product }) {
   return (
     <div className="product-card">
 
-      {product.aiRecommended && (
+      {safeProduct.aiRecommended && (
         <div className="ai-badge">
           <Sparkles size={13} />
           AI Recommended
@@ -60,13 +76,13 @@ export default function ProductCard({ product }) {
         {imgError ? (
           <div className="product-image-fallback">
             <PackageX size={44} color="#94A3B8" />
-            <span>{product.category}</span>
+            <span>{safeProduct.category}</span>
           </div>
         ) : (
-          <Link to={`/products/${product.id}`} aria-label={product.name}>
+          <Link to={`/products/${safeProduct.id}`} aria-label={safeProduct.name}>
             <img
-              src={product.image}
-              alt={product.name}
+              src={safeProduct.image}
+              alt={safeProduct.name}
               loading="lazy"
               className="product-image"
               onError={() => setImgError(true)}
@@ -76,34 +92,34 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="product-info">
-        <span className="product-category">{product.category}</span>
+        <span className="product-category">{safeProduct.category}</span>
 
-        <Link to={`/products/${product.id}`} className="product-title-link">
-          <h3>{product.name}</h3>
+        <Link to={`/products/${safeProduct.id}`} className="product-title-link">
+          <h3>{safeProduct.name}</h3>
         </Link>
 
         <div className="product-rating">
           <span className="rating-box">
             <Star size={13} fill="currentColor" />
-            {product.rating}
+            {safeProduct.rating}
           </span>
-          <span className="review-count">({product.reviews})</span>
+          <span className="review-count">({safeProduct.reviews})</span>
         </div>
 
         <div className="product-price">
-          <strong>₹{product.price.toLocaleString("en-IN")}</strong>
-          <span>₹{product.oldPrice.toLocaleString("en-IN")}</span>
-          <b>{product.discount}% OFF</b>
+          <strong>₹{formatNumber(safeProduct.price)}</strong>
+          {safeProduct.oldPrice > safeProduct.price && <span>₹{formatNumber(safeProduct.oldPrice)}</span>}
+          {safeProduct.discount > 0 && <b>{safeProduct.discount}% OFF</b>}
         </div>
 
-        {product.freeDelivery && (
+        {safeProduct.freeDelivery && (
           <div className="free-delivery">
             <Truck size={15} />
             Free Delivery
           </div>
         )}
 
-        {!product.inStock && (
+        {!safeProduct.inStock && (
           <p className="out-of-stock">Out of Stock</p>
         )}
 
@@ -111,7 +127,7 @@ export default function ProductCard({ product }) {
           <button
             className="add-cart-button"
             onClick={handleAdd}
-            disabled={!product.inStock}
+            disabled={!safeProduct.inStock}
           >
             <ShoppingCart size={16} />
             {added ? "Added" : "Add to Cart"}
@@ -120,7 +136,7 @@ export default function ProductCard({ product }) {
           <button
             className="buy-now-button"
             onClick={handleBuyNow}
-            disabled={!product.inStock}
+            disabled={!safeProduct.inStock}
           >
             <Zap size={16} />
             Buy Now

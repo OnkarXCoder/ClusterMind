@@ -1,14 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Header from '../components/Header'
 import HeroCarousel from '../components/HeroCarousel'
 import StorefrontHighlights from '../components/StorefrontHighlights'
 import GiftFinder from '../components/GiftFinder'
-import { giftRecipients, matchesGiftRecipient } from '../components/giftRules'
+import { giftRecipients, rankGiftsForRecipient, resolveRecipientKey } from '../components/giftRules'
 import CategoryGrid from '../components/CategoryGrid'
 import ProductGrid from '../components/ProductGrid'
 import CartDrawer from '../components/CartDrawer'
 import Footer from '../components/Footer'
-import { products } from '../data/products'
 import './HomePage.css'
 
 export default function HomePage() {
@@ -16,6 +15,21 @@ export default function HomePage() {
   const [category, setCategory] = useState('All')
   const [sort, setSort] = useState('featured')
   const [giftRecipient, setGiftRecipient] = useState('')
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (category && category !== 'All') params.set('category', category)
+    if (search) params.set('search', search)
+    if (sort) params.set('sort', sort)
+
+    fetch(`/api/products?${params.toString()}`)
+      .then(r => r.json())
+      .then(data => {
+        setProducts(data?.products || data || [])
+      })
+      .catch(() => setProducts([]))
+  }, [category, search, sort])
 
   const scrollToProducts = () => {
     document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })
@@ -32,29 +46,13 @@ export default function HomePage() {
   }
 
   const filtered = useMemo(() => {
-    let list = products.filter(
-      (p) =>
-        (category === 'All' || p.category === category) &&
-        matchesGiftRecipient(p, giftRecipient) &&
-        p.name.toLowerCase().includes(search.toLowerCase())
-    )
-    switch (sort) {
-      case 'price-asc':
-        list = [...list].sort((a, b) => a.price - b.price)
-        break
-      case 'price-desc':
-        list = [...list].sort((a, b) => b.price - a.price)
-        break
-      case 'rating':
-        list = [...list].sort((a, b) => b.rating - a.rating)
-        break
-      default:
-        break
-    }
-    return list
-  }, [category, giftRecipient, search, sort])
+    const list = giftRecipient
+      ? rankGiftsForRecipient(products, giftRecipient, products.length)
+      : products
+    return [...list].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+  }, [products, giftRecipient])
 
-  const recipientLabel = giftRecipients.find((item) => item.key === giftRecipient)?.label
+  const recipientLabel = giftRecipients.find((item) => item.key === resolveRecipientKey(giftRecipient))?.label
   const heading =
     giftRecipient
       ? `Gift Ideas for ${recipientLabel}`

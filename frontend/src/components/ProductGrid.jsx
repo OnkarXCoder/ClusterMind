@@ -1,5 +1,16 @@
-import { categories } from '../data/products'
+import { useState, useEffect } from 'react'
 import ProductCard from './ProductCard'
+
+const useCategories = () => {
+  const [cats, setCats] = useState([])
+  useEffect(() => {
+    fetch('/api/products/categories')
+      .then(r => r.json())
+      .then(d => setCats(d?.categories || []))
+      .catch(() => {})
+  }, [])
+  return cats
+}
 
 export default function ProductGrid({
   heading,
@@ -9,6 +20,8 @@ export default function ProductGrid({
   sort,
   onSortChange,
 }) {
+  const categories = useCategories()
+
   return (
     <section id="products" className="amazon-products-shell">
       <div className="amazon-section-head">
@@ -28,6 +41,13 @@ export default function ProductGrid({
       </div>
 
       <div className="amazon-filter-row">
+        <button
+          type="button"
+          onClick={() => onCategoryChange('All')}
+          className={category === 'All' ? 'active' : ''}
+        >
+          All
+        </button>
         {categories.map((c) => (
           <button
             key={c}
@@ -48,7 +68,7 @@ export default function ProductGrid({
       ) : (
         <div className="amazon-product-grid">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <ProductCard key={p._id || p.id} product={p} />
           ))}
         </div>
       )}

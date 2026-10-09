@@ -14,67 +14,57 @@ const COLUMNS = [
 
 export default function CampaignTable({ campaigns, onView, onDelete }) {
   return (
-    <div className="dashboard-table-wrap overflow-x-auto">
-      <table className="dashboard-table w-full text-left text-sm">
+    <div className="dm-table-wrap">
+      <table className="dm-table">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <tr>
             {COLUMNS.map((col) => (
-              <th key={col.key} className="whitespace-nowrap px-5 py-3.5 font-semibold">
-                {col.label}
-              </th>
+              <th key={col.key}>{col.label}</th>
             ))}
-            <th className="whitespace-nowrap px-5 py-3.5 font-semibold">Actions</th>
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {campaigns.length === 0 && (
             <tr>
-              <td colSpan={COLUMNS.length + 1} className="px-5 py-10 text-center text-sm text-slate-400">
+              <td colSpan={COLUMNS.length + 1} style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>
                 No campaigns found
               </td>
             </tr>
           )}
           {campaigns.map((c) => (
-            <tr key={c.id} className="transition hover:bg-slate-50">
-              <td className="px-5 py-4 font-semibold text-slate-900">{c.name}</td>
-              <td className="px-5 py-4 text-slate-600">{c.segment}</td>
-              <td className="px-5 py-4 text-slate-600">{c.channel}</td>
-              <td className="px-5 py-4">
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+            <tr key={c.id}>
+              <td style={{ fontWeight: 700, color: '#1E293B' }}>{c.name}</td>
+              <td>{c.segment}</td>
+              <td>{c.channel}</td>
+              <td>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <CalendarDays size={13} style={{ color: '#94A3B8' }} />
                   {c.startDate}
                 </span>
               </td>
-              <td className="px-5 py-4">
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+              <td>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <CalendarDays size={13} style={{ color: '#94A3B8' }} />
                   {c.endDate}
                 </span>
               </td>
-              <td className="px-5 py-4">
-                <StatusBadge status={c.status} />
-              </td>
-              <td className="px-5 py-4">
+              <td><StatusBadge status={c.status} /></td>
+              <td>
                 {c.performance ? (
-                  <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, color: '#16A34A' }}>
+                    <TrendingUp size={14} />
                     {c.performance}%
                   </span>
                 ) : (
-                  <span className="text-slate-400">—</span>
+                  <span style={{ color: '#94A3B8' }}>—</span>
                 )}
               </td>
-              <td className="px-5 py-4">
-                <div className="flex items-center gap-1.5">
-                  <Button variant="ghost" size="sm" icon={Eye} onClick={() => onView?.(c)}>
-                    View
-                  </Button>
-                  <button
-                    onClick={() => onDelete?.(c)}
-                    className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
-                    aria-label="Delete campaign"
-                  >
-                    <Trash2 className="h-4 w-4" />
+              <td>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <Button variant="ghost" size="sm" icon={Eye} onClick={() => onView?.(c)}>View</Button>
+                  <button onClick={() => onDelete?.(c)} style={{ padding: 6, borderRadius: 8, border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer' }}>
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </td>

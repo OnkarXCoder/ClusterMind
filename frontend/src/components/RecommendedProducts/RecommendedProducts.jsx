@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 import ProductCard from "../ProductCard/ProductCard";
@@ -6,10 +7,24 @@ import "./RecommendedProducts.css";
 
 export default function RecommendedProducts() {
   const navigate = useNavigate();
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
 
-  const recommendedProducts = getProducts()
-    .filter((product) => product.aiRecommended)
-    .slice(0, 4);
+  useEffect(() => {
+    let active = true;
+
+    getProducts().then((products) => {
+      if (!active) return;
+      setRecommendedProducts(
+        products
+          .filter((product) => product.aiRecommended)
+          .slice(0, 4)
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <section className="recommended-section">

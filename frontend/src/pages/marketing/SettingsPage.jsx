@@ -61,10 +61,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">Settings</h2>
-        <p className="text-sm text-slate-500">Manage profile, preferences and security</p>
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon blue">
+          <LayoutDashboard className="h-6 w-6" />
+        </div>
+        <h2 className="dm-hero-title">Settings</h2>
+        <p className="dm-hero-sub">Manage profile, preferences and security</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

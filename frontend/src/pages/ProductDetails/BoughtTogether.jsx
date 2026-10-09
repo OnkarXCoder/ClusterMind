@@ -1,15 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, ShoppingCart } from "lucide-react";
 import { getBoughtTogether } from "../../services/products";
 import "./ProductDetails.css";
 
-const fmt = (n) => n.toLocaleString("en-IN");
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
 
 export default function BoughtTogether({ product }) {
-  const bundle = getBoughtTogether(product);
+  const [bundle, setBundle] = useState([]);
   const [added, setAdded] = useState(false);
 
-  const total = bundle.reduce((sum, p) => sum + p.price, 0);
+  useEffect(() => {
+    let cancelled = false;
+    getBoughtTogether(product).then((items) => {
+      if (!cancelled) setBundle(Array.isArray(items) ? items : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [product]);
+
+  const total = bundle.reduce((sum, p) => sum + Number(p.price || 0), 0);
 
   const handleAddAll = () => {
     setAdded(true);

@@ -6,16 +6,16 @@ export default function ChartCard({ title, subtitle, action, children, className
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`dashboard-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}
+      className={`dm-card ${className}`}
     >
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-base font-bold text-slate-900">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+      <div className="dm-card-head" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <h3 style={{ margin: 0 }}>{title}</h3>
+          {subtitle && <p className="dm-hero-sub">{subtitle}</p>}
         </div>
         {action}
       </div>
-      <div className={`min-w-0 ${bodyClassName}`}>{children}</div>
+      <div className={`dm-card-body ${bodyClassName}`}>{children}</div>
     </motion.div>
   )
 }

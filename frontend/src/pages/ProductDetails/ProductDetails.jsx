@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Navbar from "../../components/Navbar/Navbar";
 import { getProductById } from "../../services/products";
@@ -14,7 +15,34 @@ import "./ProductDetails.css";
 
 export default function ProductDetails() {
   const { id } = useParams();
-  const product = getProductById(id);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setProduct(null);
+
+    getProductById(id).then((resolvedProduct) => {
+      if (!cancelled) {
+        setProduct(resolvedProduct);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="not-found">
+        <Loader2 className="spin" size={32} />
+        <h2>Loading product</h2>
+      </div>
+    );
+  }
 
   if (!product) {
     return (

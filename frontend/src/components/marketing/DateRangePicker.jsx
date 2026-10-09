@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { CalendarDays, ChevronDown } from 'lucide-react'
-import { CURRENT_DATE_RANGE } from '../../data/marketingMockData'
+import { currentMonthRange } from '../../utils/dateRange'
 
 export default function DateRangePicker({ value, onChange }) {
+  const initial = currentMonthRange()
   const [open, setOpen] = useState(false)
-  const [start, setStart] = useState(CURRENT_DATE_RANGE.start)
-  const [end, setEnd] = useState(CURRENT_DATE_RANGE.end)
+  const [start, setStart] = useState(initial.start)
+  const [end, setEnd] = useState(initial.end)
   const ref = useRef(null)
 
   const label =

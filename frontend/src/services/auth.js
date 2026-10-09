@@ -6,8 +6,6 @@ const USERS_KEY = "clustermind_users";
 
 const sleep = (ms = 600) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const isAuthenticated = () => !!localStorage.getItem(TOKEN_KEY);
-
 export const getCurrentUser = () => {
   try {
     return JSON.parse(localStorage.getItem(USER_KEY) || "null");
@@ -16,10 +14,39 @@ export const getCurrentUser = () => {
   }
 };
 
+export const isAuthenticated = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const user = getCurrentUser();
+  return Boolean(token && user?.role);
+};
+
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
+export const hasRemoteAuth = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return Boolean(token && !token.startsWith("fake-jwt-"));
+};
+
+export const clearInvalidSession = (response) => {
+  if (response?.status === 401) {
+    logout();
+  }
+  return response;
+};
+
 export const logout = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem("marketing_api_key");
+  localStorage.removeItem("shopsmart_token");
+  localStorage.removeItem("shopsmart_role");
+  localStorage.removeItem("shopsmart_user");
 };
 
 const DEFAULT_USERS = [
@@ -150,18 +177,7 @@ export const fakeRegister = async (data) => {
         contact: data.phone,
         password: data.password,
       });
-      const { token, user } = res.data;
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(
-        USER_KEY,
-        JSON.stringify({
-          id: user.id,
-          fullName: user.name,
-          email: user.email || data.email,
-          phone: user.contact || data.phone,
-          role: user.role || "customer",
-        })
-      );
+      const { user } = res.data;
       return user;
     } catch (err) {
       const message = err?.response?.data?.message;

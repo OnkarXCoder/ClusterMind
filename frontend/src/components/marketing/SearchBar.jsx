@@ -1,23 +1,25 @@
 import { Search, X } from 'lucide-react'
 
-export default function SearchBar({ value, onChange, placeholder = 'Search...', className = '' }) {
+export default function SearchBar({ value, onChange, onKeyDown, placeholder = 'Search...', className = '' }) {
   return (
-    <div className={`relative ${className}`}>
-      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    <div className={className} style={{ position: 'relative' }}>
+      <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#94A3B8', pointerEvents: 'none' }} />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+        className="dm-input"
+        style={{ paddingLeft: 36, paddingRight: value ? 32 : 12 }}
       />
       {value && (
         <button
           onClick={() => onChange('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:text-slate-700"
+          style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', padding: 2, borderRadius: '50%', border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer', display: 'flex' }}
           aria-label="Clear search"
         >
-          <X className="h-4 w-4" />
+          <X size={14} />
         </button>
       )}
     </div>

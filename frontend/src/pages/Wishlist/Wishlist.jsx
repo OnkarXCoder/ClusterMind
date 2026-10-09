@@ -12,6 +12,7 @@ import "./Wishlist.css";
 
 export default function Wishlist() {
   const [items, setItems] = useState(getWishlist());
+  const [products, setProducts] = useState([]);
 
   useEffect(
     () =>
@@ -21,13 +22,19 @@ export default function Wishlist() {
     []
   );
 
-  const products = useMemo(
-    () =>
-      items
-        .map((w) => getProductById(w.productId))
-        .filter(Boolean),
-    [items]
-  );
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all(items.map((w) => getProductById(w.productId))).then((resolved) => {
+      if (!cancelled) {
+        setProducts(resolved.filter(Boolean));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   const excludeIds = useMemo(
     () => [...new Set([...items.map((w) => w.productId), ...getCartItems().map((c) => c.productId)])],

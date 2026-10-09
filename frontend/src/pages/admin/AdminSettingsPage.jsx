@@ -1,191 +1,280 @@
 import { useState } from 'react'
-import { Settings, Globe, Database, Shield, Key } from 'lucide-react'
-import ChartCard from '../../components/marketing/ChartCard'
-import Button from '../../components/marketing/Button'
+import { Settings, Globe, Database, Shield, Key, Save, RotateCcw, Download, CheckCircle2 } from 'lucide-react'
 import { useToast } from '../../components/marketing/Toast'
+import './AdminSettingsPage.css'
+
+const tabs = [
+  { key: 'general', label: 'General', icon: Settings },
+  { key: 'language', label: 'Language', icon: Globe },
+  { key: 'database', label: 'Database', icon: Database },
+  { key: 'security', label: 'Security', icon: Shield },
+  { key: 'api', label: 'API', icon: Key },
+]
+
+function Field({ label, hint, children }) {
+  return (
+    <div className="settings-field">
+      <label className="settings-field-label">{label}</label>
+      {hint && <p className="settings-field-hint">{hint}</p>}
+      {children}
+    </div>
+  )
+}
+
+function TextInput({ value, onChange, mono }) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={onChange}
+      className={`settings-input ${mono ? 'settings-input-mono' : ''}`}
+    />
+  )
+}
+
+function NumberInput({ value, onChange, min, max }) {
+  return (
+    <input
+      type="number"
+      value={value}
+      min={min}
+      max={max}
+      onChange={onChange}
+      className="settings-input"
+    />
+  )
+}
 
 export default function AdminSettingsPage() {
   const { show } = useToast()
   const [activeTab, setActiveTab] = useState('general')
+  const [saved, setSaved] = useState(null)
 
-  const [general, setGeneral] = useState({ siteName: 'ShopSmart', siteUrl: 'https://shopsmart.com', supportEmail: 'support@shopsmart.com', timezone: 'Asia/Kolkata' })
-  const [security, setSecurity] = useState({ twoFactor: true, sessionTimeout: 30, passwordMinLength: 8, maxLoginAttempts: 5 })
-  const [api, setApi] = useState({ apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxx', webhookUrl: 'https://shopsmart.com/webhook', rateLimit: 1000 })
-  const [language, setLanguage] = useState({ defaultLang: 'en', dateFormat: 'DD/MM/YYYY', currency: 'INR', currencySymbol: '₹' })
+  const [general, setGeneral] = useState({
+    siteName: 'ShopSmart',
+    siteUrl: 'https://shopsmart.com',
+    supportEmail: 'support@shopsmart.com',
+    timezone: 'Asia/Kolkata',
+  })
 
-  const tabs = [
-    { key: 'general', label: 'General Settings', icon: Settings },
-    { key: 'language', label: 'Language & Locale', icon: Globe },
-    { key: 'database', label: 'Database', icon: Database },
-    { key: 'security', label: 'Security', icon: Shield },
-    { key: 'api', label: 'API Config', icon: Key },
-  ]
+  const [security, setSecurity] = useState({
+    twoFactor: true,
+    sessionTimeout: 30,
+    passwordMinLength: 8,
+    maxLoginAttempts: 5,
+  })
+
+  const [api, setApi] = useState({
+    apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxx',
+    webhookUrl: 'https://shopsmart.com/webhook',
+    rateLimit: 1000,
+  })
+
+  const [language, setLanguage] = useState({
+    defaultLang: 'en',
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'INR',
+    currencySymbol: '\u20B9',
+  })
 
   const handleSave = (section) => {
-    show(`${section} settings saved (demo)`, 'success')
-  }
-
-  const handleBackup = () => {
-    show('Database backup initiated (demo)', 'success')
-  }
-
-  const handleRestore = () => {
-    show('Database restore initiated (demo)', 'info')
+    const key = section.toLowerCase()
+    setSaved(key)
+    show(`${section} settings saved successfully`, 'success')
+    setTimeout(() => setSaved(null), 2000)
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">System Settings</h2>
-        <p className="text-sm text-slate-500">Configure system-wide settings and preferences</p>
+    <div className="settings-page">
+      <div className="settings-hero">
+        <div className="settings-hero-icon">
+          <Settings className="h-7 w-7 text-white" />
+        </div>
+        <div>
+          <h2 className="settings-hero-title">System Settings</h2>
+          <p className="settings-hero-sub">Configure system-wide settings and preferences</p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="settings-tabs">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              activeTab === t.key
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
-            }`}
+            className={`settings-tab ${activeTab === t.key ? 'active' : ''}`}
           >
             <t.icon className="h-4 w-4" />
-            {t.label}
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
 
-      {activeTab === 'general' && (
-        <ChartCard title="General Settings" subtitle="Basic site configuration">
-          <div className="space-y-4">
-            {Object.entries(general).map(([key, val]) => (
-              <div key={key}>
-                <label className="mb-1 block text-xs font-medium text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
-                <input
-                  value={val}
-                  onChange={(e) => setGeneral({ ...general, [key]: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                />
-              </div>
-            ))}
-            <Button onClick={() => handleSave('General')}>Save Changes</Button>
-          </div>
-        </ChartCard>
-      )}
-
-      {activeTab === 'language' && (
-        <ChartCard title="Language & Locale Settings" subtitle="Localization preferences">
-          <div className="space-y-4">
-            {Object.entries(language).map(([key, val]) => (
-              <div key={key}>
-                <label className="mb-1 block text-xs font-medium text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
-                <input
-                  value={val}
-                  onChange={(e) => setLanguage({ ...language, [key]: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                />
-              </div>
-            ))}
-            <Button onClick={() => handleSave('Language')}>Save Changes</Button>
-          </div>
-        </ChartCard>
-      )}
-
-      {activeTab === 'database' && (
-        <div className="space-y-6">
-          <ChartCard title="Database Management" subtitle="Backup and restore operations">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
-                      <Database className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">Backup Database</p>
-                      <p className="text-xs text-slate-500">Create a full backup of all data</p>
-                    </div>
-                  </div>
-                  <Button className="mt-4" icon={Database} onClick={handleBackup}>Start Backup</Button>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white">
-                      <Database className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">Restore Database</p>
-                      <p className="text-xs text-slate-500">Restore from a previous backup</p>
-                    </div>
-                  </div>
-                  <Button className="mt-4" variant="secondary" icon={Database} onClick={handleRestore}>Start Restore</Button>
-                </div>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="text-xs font-medium text-slate-500">Last Backup</p>
-                <p className="mt-0.5 text-sm font-bold text-slate-900">28 May 2024, 2:00 AM — 245 MB</p>
-              </div>
+      <div className="settings-body">
+        {activeTab === 'general' && (
+          <div className="settings-card">
+            <div className="settings-card-head">
+              <h3>General Settings</h3>
+              <p>Basic site configuration and branding</p>
             </div>
-          </ChartCard>
-        </div>
-      )}
-
-      {activeTab === 'security' && (
-        <ChartCard title="Security Settings" subtitle="Authentication and access controls">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">Two-Factor Authentication</p>
-                <p className="text-xs text-slate-500">Require 2FA for all admin accounts</p>
-              </div>
-              <button
-                onClick={() => {
-                  setSecurity({ ...security, twoFactor: !security.twoFactor })
-                  show(`2FA ${!security.twoFactor ? 'enabled' : 'disabled'} (demo)`, 'success')
-                }}
-                className={`relative h-6 w-11 rounded-full transition ${security.twoFactor ? 'bg-emerald-500' : 'bg-slate-300'}`}
-              >
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${security.twoFactor ? 'left-5.5' : 'left-0.5'}`} style={{ left: security.twoFactor ? '22px' : '2px' }} />
+            <div className="settings-fields">
+              <Field label="Site Name" hint="The name displayed across the platform">
+                <TextInput value={general.siteName} onChange={(e) => setGeneral({ ...general, siteName: e.target.value })} />
+              </Field>
+              <Field label="Site URL" hint="The primary domain for your store">
+                <TextInput value={general.siteUrl} onChange={(e) => setGeneral({ ...general, siteUrl: e.target.value })} />
+              </Field>
+              <Field label="Support Email" hint="Contact email for customer support">
+                <TextInput value={general.supportEmail} onChange={(e) => setGeneral({ ...general, supportEmail: e.target.value })} />
+              </Field>
+              <Field label="Timezone" hint="Default timezone for reports and logs">
+                <TextInput value={general.timezone} onChange={(e) => setGeneral({ ...general, timezone: e.target.value })} />
+              </Field>
+            </div>
+            <div className="settings-card-foot">
+              <button className="settings-save-btn" onClick={() => handleSave('General')}>
+                {saved === 'general' ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                {saved === 'general' ? 'Saved!' : 'Save Changes'}
               </button>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Session Timeout (minutes)</label>
-              <input type="number" value={security.sessionTimeout} onChange={(e) => setSecurity({ ...security, sessionTimeout: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Minimum Password Length</label>
-              <input type="number" value={security.passwordMinLength} onChange={(e) => setSecurity({ ...security, passwordMinLength: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Max Login Attempts</label>
-              <input type="number" value={security.maxLoginAttempts} onChange={(e) => setSecurity({ ...security, maxLoginAttempts: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
-            </div>
-            <Button onClick={() => handleSave('Security')}>Save Changes</Button>
           </div>
-        </ChartCard>
-      )}
+        )}
 
-      {activeTab === 'api' && (
-        <ChartCard title="API Configuration" subtitle="API keys and webhook settings">
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">API Key</label>
-              <input value={api.apiKey} onChange={(e) => setApi({ ...api, apiKey: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-mono outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
+        {activeTab === 'language' && (
+          <div className="settings-card">
+            <div className="settings-card-head">
+              <h3>Language & Locale</h3>
+              <p>Localization and currency preferences</p>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Webhook URL</label>
-              <input value={api.webhookUrl} onChange={(e) => setApi({ ...api, webhookUrl: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
+            <div className="settings-fields">
+              <Field label="Default Language" hint="Primary language for the storefront">
+                <TextInput value={language.defaultLang} onChange={(e) => setLanguage({ ...language, defaultLang: e.target.value })} />
+              </Field>
+              <Field label="Date Format" hint="How dates are displayed to users">
+                <TextInput value={language.dateFormat} onChange={(e) => setLanguage({ ...language, dateFormat: e.target.value })} />
+              </Field>
+              <Field label="Currency Code" hint="ISO currency code (e.g. INR, USD)">
+                <TextInput value={language.currency} onChange={(e) => setLanguage({ ...language, currency: e.target.value })} />
+              </Field>
+              <Field label="Currency Symbol" hint="Symbol shown before prices">
+                <TextInput value={language.currencySymbol} onChange={(e) => setLanguage({ ...language, currencySymbol: e.target.value })} />
+              </Field>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Rate Limit (req/min)</label>
-              <input type="number" value={api.rateLimit} onChange={(e) => setApi({ ...api, rateLimit: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" />
+            <div className="settings-card-foot">
+              <button className="settings-save-btn" onClick={() => handleSave('Language')}>
+                {saved === 'language' ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                {saved === 'language' ? 'Saved!' : 'Save Changes'}
+              </button>
             </div>
-            <Button onClick={() => handleSave('API')}>Save Changes</Button>
           </div>
-        </ChartCard>
-      )}
+        )}
+
+        {activeTab === 'database' && (
+          <div className="settings-card">
+            <div className="settings-card-head">
+              <h3>Database Management</h3>
+              <p>Backup and restore operations</p>
+            </div>
+            <div className="settings-db-grid">
+              <div className="settings-db-card">
+                <div className="settings-db-icon bg-emerald-500">
+                  <Download className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="settings-db-title">Backup Database</p>
+                  <p className="settings-db-desc">Create a full backup of all data</p>
+                </div>
+                <button className="settings-db-btn primary" onClick={() => show('Database backup initiated (demo)', 'success')}>
+                  <Download className="h-4 w-4" /> Start Backup
+                </button>
+              </div>
+              <div className="settings-db-card">
+                <div className="settings-db-icon bg-amber-500">
+                  <RotateCcw className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="settings-db-title">Restore Database</p>
+                  <p className="settings-db-desc">Restore from a previous backup</p>
+                </div>
+                <button className="settings-db-btn secondary" onClick={() => show('Database restore initiated (demo)', 'info')}>
+                  <RotateCcw className="h-4 w-4" /> Start Restore
+                </button>
+              </div>
+            </div>
+            <div className="settings-db-last">
+              <p className="settings-db-last-label">Last Backup</p>
+              <p className="settings-db-last-value">28 May 2024, 2:00 AM &mdash; 245 MB</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'security' && (
+          <div className="settings-card">
+            <div className="settings-card-head">
+              <h3>Security Settings</h3>
+              <p>Authentication and access controls</p>
+            </div>
+            <div className="settings-fields">
+              <div className="settings-toggle-row">
+                <div>
+                  <p className="settings-toggle-label">Two-Factor Authentication</p>
+                  <p className="settings-toggle-desc">Require 2FA for all admin accounts</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSecurity({ ...security, twoFactor: !security.twoFactor })
+                    show(`2FA ${!security.twoFactor ? 'enabled' : 'disabled'} (demo)`, 'success')
+                  }}
+                  className={`settings-toggle ${security.twoFactor ? 'on' : ''}`}
+                >
+                  <span className={`settings-toggle-thumb ${security.twoFactor ? 'on' : ''}`} />
+                </button>
+              </div>
+              <Field label="Session Timeout (minutes)" hint="Auto-logout after inactivity">
+                <NumberInput value={security.sessionTimeout} min={5} max={120} onChange={(e) => setSecurity({ ...security, sessionTimeout: e.target.value })} />
+              </Field>
+              <Field label="Minimum Password Length" hint="Enforce stronger passwords">
+                <NumberInput value={security.passwordMinLength} min={6} max={32} onChange={(e) => setSecurity({ ...security, passwordMinLength: e.target.value })} />
+              </Field>
+              <Field label="Max Login Attempts" hint="Lock account after failed attempts">
+                <NumberInput value={security.maxLoginAttempts} min={3} max={20} onChange={(e) => setSecurity({ ...security, maxLoginAttempts: e.target.value })} />
+              </Field>
+            </div>
+            <div className="settings-card-foot">
+              <button className="settings-save-btn" onClick={() => handleSave('Security')}>
+                {saved === 'security' ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                {saved === 'security' ? 'Saved!' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'api' && (
+          <div className="settings-card">
+            <div className="settings-card-head">
+              <h3>API Configuration</h3>
+              <p>API keys and webhook settings</p>
+            </div>
+            <div className="settings-fields">
+              <Field label="API Key" hint="Secret key for API authentication">
+                <TextInput value={api.apiKey} mono onChange={(e) => setApi({ ...api, apiKey: e.target.value })} />
+              </Field>
+              <Field label="Webhook URL" hint="Endpoint for event notifications">
+                <TextInput value={api.webhookUrl} onChange={(e) => setApi({ ...api, webhookUrl: e.target.value })} />
+              </Field>
+              <Field label="Rate Limit (req/min)" hint="Maximum requests per minute">
+                <NumberInput value={api.rateLimit} min={100} max={10000} onChange={(e) => setApi({ ...api, rateLimit: e.target.value })} />
+              </Field>
+            </div>
+            <div className="settings-card-foot">
+              <button className="settings-save-btn" onClick={() => handleSave('API')}>
+                {saved === 'api' ? <CheckCircle2 className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                {saved === 'api' ? 'Saved!' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

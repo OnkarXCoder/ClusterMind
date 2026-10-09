@@ -3,7 +3,7 @@ import { CheckCircle2, Truck, Package, Calendar } from "lucide-react";
 import { getOrderById } from "../../services/orders";
 import "./OrderSuccess.css";
 
-const fmt = (n) => n.toLocaleString("en-IN");
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
 
 export default function OrderSuccess() {
   const { orderId } = useParams();

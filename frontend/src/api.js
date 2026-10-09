@@ -2,6 +2,9 @@ const BASE = '/api'
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('clustermind_token')
+  if (token?.startsWith('fake-jwt-')) {
+    throw new Error('Backend authentication is unavailable for the current local session.')
+  }
   const { headers, ...requestOptions } = options
   const res = await fetch(`${BASE}${path}`, {
     headers: {
@@ -13,6 +16,10 @@ async function request(path, options = {}) {
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('clustermind_token')
+      localStorage.removeItem('clustermind_user')
+    }
     throw new Error(data.message || 'Something went wrong. Please try again.')
   }
   return data
@@ -51,6 +58,10 @@ export function ensureDataset(force = false) {
   return mlRequest(`/ml/dataset/ensure?force=${force}`, { method: 'POST' })
 }
 
+export function syncCustomerDataset() {
+  return mlRequest('/ml/dataset/sync-customers', { method: 'POST' })
+}
+
 export function getDataset() {
   return mlRequest('/ml/dataset')
 }
@@ -79,8 +90,11 @@ export function getModels() {
   return mlRequest('/ml/models')
 }
 
-export function getSegments() {
-  return mlRequest('/ml/segments')
+export function getSegments(options = {}) {
+  const qs = new URLSearchParams(
+    Object.entries(options).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  ).toString()
+  return mlRequest(`/ml/segments${qs ? `?${qs}` : ''}`)
 }
 
 export function getBehaviour() {
@@ -206,10 +220,30 @@ export function getAdminTeamUsers() {
   return adminRequest('/admin/team-users')
 }
 
+export function createAdminTeamUser(payload) {
+  return adminRequest('/admin/team-users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function updateAdminTeamUserStatus(userId, status) {
   return adminRequest(`/admin/team-users/${userId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  })
+}
+
+export function updateAdminTeamUser(userId, payload) {
+  return adminRequest(`/admin/team-users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteAdminTeamUser(userId) {
+  return adminRequest(`/admin/team-users/${userId}`, {
+    method: 'DELETE',
   })
 }
 
@@ -369,4 +403,72 @@ export function regenerateMarketingApiKey() {
   return marketingRequest('/api-key/regenerate', {
     method: 'POST',
   })
+}
+
+// AI Sales Agent
+export function createAiSalesSession(customerId) {
+  return request('/ai-sales/session', { method: 'POST', body: JSON.stringify({ customerId }) })
+}
+
+export function sendAiSalesMessage(payload) {
+  return request('/ai-sales/chat', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function getAiSalesRecommendations(criteria) {
+  return request('/ai-sales/recommend', { method: 'POST', body: JSON.stringify(criteria) })
+}
+
+export function compareAiSalesProducts(productIds) {
+  return request('/ai-sales/compare', { method: 'POST', body: JSON.stringify({ productIds }) })
+}
+
+export function createAiSalesHandoff(payload) {
+  return request('/ai-sales/handoff', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function getAiSalesAnalytics() {
+  return request('/ai-sales/analytics')
+}
+
+// Orders
+export function getOrders(all = false) {
+  return request(`/orders${all ? '?all=true' : ''}`)
+}
+
+export function getOrderById(orderId) {
+  return request(`/orders/${orderId}`)
+}
+
+export function createOrder(payload) {
+  return request('/orders', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+// Payments (Razorpay)
+export function getPaymentConfig() {
+  return request('/payments/config')
+}
+
+export function createPaymentOrder(orderId) {
+  return request('/payments/create-order', { method: 'POST', body: JSON.stringify({ orderId }) })
+}
+
+export function verifyPayment(payload) {
+  return request('/payments/verify', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+// Returns & refunds
+export function getReturnRequests() {
+  return request('/returns')
+}
+
+export function getReturnRequest(id) {
+  return request(`/returns/${id}`)
+}
+
+export function createReturnRequest(payload) {
+  return request('/returns', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function cancelReturnRequest(id) {
+  return request(`/returns/${id}/cancel`, { method: 'PATCH' })
 }

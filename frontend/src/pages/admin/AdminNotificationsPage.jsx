@@ -1,23 +1,29 @@
 import { useEffect, useState } from 'react'
-import { Plus, Send } from 'lucide-react'
+import { Plus, Send, Bell } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import Modal from '../../components/marketing/Modal'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminNotifications, createAdminNotification } from '../../api'
-import { NOTIFICATIONS_DATA as MOCK_NOTIFICATIONS_DATA } from '../../data/adminMockData'
 
 export default function AdminNotificationsPage() {
   const { show } = useToast()
   const [showSend, setShowSend] = useState(false)
   const [form, setForm] = useState({ type: 'Email', title: '', audience: '', message: '' })
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS_DATA)
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const load = () => {
-    getAdminNotifications().then((res) => {
-      if (res) setNotifications(res.map((n) => ({ ...n, id: n._id ?? n.id })))
-    })
+    setLoading(true)
+    getAdminNotifications()
+      .then((res) => {
+        if (Array.isArray(res)) setNotifications(res.map((n) => ({ ...n, id: n._id ?? n.id })))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }
 
   useEffect(load, [])
@@ -39,16 +45,20 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon blue"><Bell size={24} /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Notification Management</h2>
-          <p className="text-sm text-slate-500">{notifications.length} notifications sent</p>
+          <h2 className="dm-hero-title">Notification Management</h2>
+          <p className="dm-hero-sub">{notifications.length} notifications sent</p>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button icon={Plus} onClick={() => setShowSend(true)}>Send Notification</Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="dm-grid-4">
         {['Email', 'Push', 'SMS'].map((type) => {
           const count = notifications.filter((n) => n.type === type).length
           return (
@@ -64,40 +74,51 @@ export default function AdminNotificationsPage() {
         </div>
       </div>
 
+      {loading ? (
+        <LoadingState label="Loading notifications..." />
+      ) : (
       <ChartCard title="Notifications" subtitle="All sent and scheduled notifications">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        {notifications.length === 0 ? (
+          <EmptyState
+            title="No notifications"
+            description="No notifications have been sent or scheduled yet."
+          />
+        ) : (
+        <div className="dm-table-wrap">
+          <table className="dm-table">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-3.5 font-semibold">Type</th>
-                <th className="px-5 py-3.5 font-semibold">Title</th>
-                <th className="px-5 py-3.5 font-semibold">Audience</th>
-                <th className="px-5 py-3.5 font-semibold">Scheduled</th>
-                <th className="px-5 py-3.5 font-semibold">Status</th>
-                <th className="px-5 py-3.5 font-semibold">Opened</th>
+              <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Audience</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Opened</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {notifications.map((n) => (
-                <tr key={n.id} className="transition hover:bg-slate-50">
-                  <td className="px-5 py-4">
+                <tr key={n.id}>
+                  <td>
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                       n.type === 'Email' ? 'bg-blue-100 text-blue-700' : n.type === 'Push' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
                     }`}>
                       {n.type}
                     </span>
                   </td>
-                  <td className="px-5 py-4 font-semibold text-slate-900">{n.title}</td>
-                  <td className="px-5 py-4 text-slate-600">{n.audience}</td>
-                  <td className="px-5 py-4 text-slate-500">{n.scheduled}</td>
-                  <td className="px-5 py-4"><StatusBadge status={n.status === 'Sent' ? 'Completed' : 'Scheduled'} /></td>
-                  <td className="px-5 py-4 font-semibold text-slate-900">{n.opened}</td>
+                  <td style={{ fontWeight: 700 }}>{n.title}</td>
+                  <td>{n.audience}</td>
+                  <td>{n.scheduled}</td>
+                  <td><StatusBadge status={n.status === 'Sent' ? 'Completed' : 'Scheduled'} /></td>
+                  <td style={{ fontWeight: 700 }}>{n.opened}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        )}
       </ChartCard>
+      )}
 
       <Modal
         open={showSend}

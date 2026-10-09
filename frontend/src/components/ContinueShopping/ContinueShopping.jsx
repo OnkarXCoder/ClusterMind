@@ -1,12 +1,24 @@
+import { useEffect, useState } from "react";
 import "./ContinueShopping.css";
 import RecentCard from "../RecentCard/RecentCard";
 import { getProducts } from "../../services/products";
 
-const products = getProducts().filter((p) =>
-  [1, 4, 6, 8].includes(p.id)
-);
-
 export default function ContinueShopping() {
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+
+    getProducts().then((list) => {
+      if (!active) return;
+      setProducts(list.filter((p) => [1, 4, 6, 8].includes(p.id)));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="continue">
 

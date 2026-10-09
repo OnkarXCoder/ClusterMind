@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -21,6 +21,7 @@ import "./Cart.css";
 export default function Cart() {
   const navigate = useNavigate();
   const [cart, setCart] = useState(getCartItems());
+  const [items, setItems] = useState([]);
   const [, forceUpdate] = useState(0);
 
   useEffect(() => subscribeCart(() => {
@@ -28,13 +29,20 @@ export default function Cart() {
     forceUpdate((n) => n + 1);
   }), []);
 
-  const items = useMemo(
-    () =>
-      cart
-        .map((i) => ({ ...i, product: getProductById(i.productId) }))
-        .filter((i) => i.product),
-    [cart]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      cart.map(async (item) => ({
+        ...item,
+        product: await getProductById(item.productId),
+      }))
+    ).then((resolved) => {
+      if (!cancelled) setItems(resolved.filter((item) => item.product));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cart]);
 
   const coupon = getAppliedCoupon();
   const discount = coupon?.discount || 0;

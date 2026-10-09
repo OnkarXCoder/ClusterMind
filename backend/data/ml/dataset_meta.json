@@ -1,0 +1,20 @@
+{
+  "columns": [
+    "Customer ID",
+    "Gender",
+    "Age",
+    "City",
+    "Membership Type",
+    "Total Spend",
+    "Items Purchased",
+    "Average Rating",
+    "Discount Applied",
+    "Days Since Last Purchase",
+    "Satisfaction Level"
+  ],
+  "target_column": "Satisfaction Level",
+  "uploaded_at": "2026-10-09T00:00:00.000Z",
+  "filename": "E-commerce Customer Behavior - Sheet1.csv",
+  "rows": 350,
+  "source": "E-commerce Customer Behavior dataset"
+}

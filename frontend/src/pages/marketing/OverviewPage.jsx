@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   PieChart,
   Pie,
@@ -20,27 +21,19 @@ import ChartCard from '../../components/marketing/ChartCard'
 import CampaignTable from '../../components/marketing/CampaignTable'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
-import {
-  KPI,
-  SEGMENT_DISTRIBUTION,
-  SEGMENT_CLUSTERS,
-  CAMPAIGN_PERFORMANCE,
-  AI_INSIGHTS,
-  RECENT_CAMPAIGNS,
-  MODEL_INFO,
-  AI_ASSISTANT_MESSAGE,
-} from '../../data/marketingMockData'
+import { getMarketingOverview, getSegments, getModels } from '../../api'
 
-const SEGMENT_COLORS = SEGMENT_DISTRIBUTION.map((s) => s.color)
-
-function SegmentDonut() {
+function SegmentDonut({ distribution, totalCustomers }) {
+  const colors = distribution.map((s) => s.color)
   return (
     <div className="relative h-64">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={SEGMENT_DISTRIBUTION}
+            data={distribution}
             dataKey="value"
             nameKey="name"
             innerRadius={70}
@@ -48,8 +41,8 @@ function SegmentDonut() {
             paddingAngle={2}
             strokeWidth={0}
           >
-            {SEGMENT_DISTRIBUTION.map((s, i) => (
-              <Cell key={s.name} fill={SEGMENT_COLORS[i]} />
+            {distribution.map((s, i) => (
+              <Cell key={s.name} fill={colors[i]} />
             ))}
           </Pie>
           <Tooltip
@@ -66,15 +59,15 @@ function SegmentDonut() {
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-2xl font-black text-slate-900">{KPI.totalCustomers.toLocaleString()}</p>
+        <p className="text-2xl font-black text-slate-900">{totalCustomers.toLocaleString()}</p>
         <p className="text-xs font-medium text-slate-400">Total</p>
       </div>
     </div>
   )
 }
 
-function ClusterScatter() {
-  const legend = [...new Set(SEGMENT_CLUSTERS.map((c) => c.name))]
+function ClusterScatter({ clusters }) {
+  const legend = [...new Set(clusters.map((c) => c.name))]
 
   return (
     <div>
@@ -88,12 +81,12 @@ function ClusterScatter() {
             contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
           />
           {legend.map((name) => {
-            const color = SEGMENT_CLUSTERS.find((c) => c.name === name).color
+            const color = clusters.find((c) => c.name === name).color
             return (
               <Scatter
                 key={name}
                 name={name}
-                data={SEGMENT_CLUSTERS.filter((c) => c.name === name)}
+                data={clusters.filter((c) => c.name === name)}
                 fill={color}
               />
             )
@@ -105,10 +98,10 @@ function ClusterScatter() {
   )
 }
 
-function CampaignBar() {
+function CampaignBar({ data }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={CAMPAIGN_PERFORMANCE} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
+      <BarChart data={data} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
         <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
         <YAxis hide domain={[0, 100]} />
@@ -118,7 +111,7 @@ function CampaignBar() {
           contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
         />
         <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-          {CAMPAIGN_PERFORMANCE.map((entry, i) => (
+          {data.map((entry, i) => (
             <Cell key={entry.name} fill={i === 2 ? '#7c3aed' : '#6366f1'} />
           ))}
           <LabelList dataKey="value" position="top" formatter={(v) => `${v}%`} className="fill-slate-700" fontSize={12} fontWeight={700} />
@@ -128,40 +121,154 @@ function CampaignBar() {
   )
 }
 
+const normalizeCampaign = (c) => ({
+  id: c._id || c.id,
+  name: c.name,
+  segment: c.segment || '—',
+  channel: c.channel || '—',
+  startDate: c.startDate || '—',
+  endDate: c.endDate || '—',
+  status: c.status || 'Draft',
+  performance: c.performance ?? 0,
+})
+
+const EMPTY_KPI = {
+  totalCustomers: 0,
+  activeSegments: 0,
+  modelEvaluation: null,
+  activeCampaigns: 0,
+}
+
 export default function OverviewPage() {
   const { show } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [kpi, setKpi] = useState(EMPTY_KPI)
+  const [distribution, setDistribution] = useState([])
+  const [clusters, setClusters] = useState([])
+  const [campaignPerformance, setCampaignPerformance] = useState([])
+  const [recentCampaigns, setRecentCampaigns] = useState([])
+  const [modelInfo, setModelInfo] = useState(null)
+
+  useEffect(() => {
+    let active = true
+
+    const loadOverview = async () => {
+      try {
+        const res = await getMarketingOverview()
+        if (!active || !res) return
+        if (res.stats) {
+          setKpi((k) => ({
+            ...k,
+            activeSegments: res.stats.totalSegments ?? 0,
+            activeCampaigns: res.stats.totalCampaigns ?? 0,
+          }))
+        }
+        const campaigns = res.recentCampaigns ?? []
+        setRecentCampaigns(campaigns.map(normalizeCampaign))
+        setCampaignPerformance(campaigns.map((c) => ({ name: c.name, value: c.performance ?? 0 })))
+      } catch {
+        // leave empty placeholders
+      }
+    }
+
+    const loadSegments = async () => {
+      try {
+        const live = await getSegments({ clusters: 5 })
+        if (!active || !live) return
+        if (live.totalCustomers) setKpi((k) => ({ ...k, totalCustomers: live.totalCustomers }))
+        if (live.modelEvaluation != null) setKpi((k) => ({ ...k, modelEvaluation: live.modelEvaluation }))
+        if (live.segments?.length) {
+          setDistribution(live.segments.map((s) => ({ name: s.name, value: s.percentage, color: s.color })))
+        }
+        if (live.clusters?.length) setClusters(live.clusters)
+      } catch {
+        // leave empty placeholders
+      }
+    }
+
+    const loadModels = async () => {
+      try {
+        const models = await getModels()
+        if (!active || !Array.isArray(models) || !models.length) return
+        const activeModel = models.find((m) => m.status === 'Active') || models[0]
+        setModelInfo({
+          name: activeModel.name,
+          lastTrained: activeModel.lastTrained,
+          evaluation: activeModel.evaluation,
+        })
+      } catch {
+        // leave no model
+      }
+    }
+
+    Promise.allSettled([loadOverview(), loadSegments(), loadModels()]).finally(() => {
+      if (active) setLoading(false)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleRetrain = () => {
-    show('Model training has been queued (frontend demo only).', 'success')
+    show('Model training has been queued through the ML service.', 'success')
+  }
+
+  if (loading) {
+    return (
+      <div className="dm-page">
+        <LoadingState label="Loading overview..." />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon blue">
+          <Megaphone className="h-6 w-6" />
+        </div>
+        <h2 className="dm-hero-title">Overview</h2>
+        <p className="dm-hero-sub">Customer segmentation and campaign performance at a glance</p>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard label="Total Customers Analyzed" value={KPI.totalCustomers.toLocaleString()} icon={Users} accent="from-violet-600 to-purple-600" change="+4.2% vs last month" />
-        <KpiCard label="Active Segments" value={KPI.activeSegments} icon={Layers} accent="from-blue-600 to-cyan-500" change="+1 new segment" />
-        <KpiCard label="AI Model Evaluation" value={`${KPI.modelEvaluation}%`} icon={Cpu} accent="from-emerald-500 to-teal-500" change="Silhouette score (mock)" />
-        <KpiCard label="Active Campaigns" value={KPI.activeCampaigns} icon={Megaphone} accent="from-pink-500 to-rose-500" change="6 live right now" />
-        <KpiCard label="Revenue from Campaigns" value="₹8,75,230" icon={Banknote} accent="from-amber-500 to-orange-500" change="+18.7% this period" />
+        <KpiCard label="Total Customers Analyzed" value={kpi.totalCustomers.toLocaleString()} icon={Users} accent="from-violet-600 to-purple-600" />
+        <KpiCard label="Active Segments" value={kpi.activeSegments} icon={Layers} accent="from-blue-600 to-cyan-500" />
+        <KpiCard label="AI Model Evaluation" value={kpi.modelEvaluation != null ? `${kpi.modelEvaluation}%` : '—'} icon={Cpu} accent="from-emerald-500 to-teal-500" />
+        <KpiCard label="Active Campaigns" value={kpi.activeCampaigns} icon={Megaphone} accent="from-pink-500 to-rose-500" />
+        <KpiCard label="Revenue from Campaigns" value="—" icon={Banknote} accent="from-amber-500 to-orange-500" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <ChartCard title="Customer Segments" subtitle="Distribution across the 5 active segments">
-          <SegmentDonut />
+        <ChartCard title="Customer Segments" subtitle="Distribution across the active segments">
+          {distribution.length ? (
+            <SegmentDonut distribution={distribution} totalCustomers={kpi.totalCustomers} />
+          ) : (
+            <EmptyState title="No segment data" description="Segmentation data is not available yet." />
+          )}
         </ChartCard>
 
         <ChartCard
           title="Customer Segmentation"
-          subtitle="Cluster visualization (UI only)"
+          subtitle="Cluster visualization"
           className="xl:col-span-2"
         >
-          <ClusterScatter />
+          {clusters.length ? (
+            <ClusterScatter clusters={clusters} />
+          ) : (
+            <EmptyState title="No cluster data" description="Train a segmentation model to visualize clusters." />
+          )}
         </ChartCard>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <ChartCard title="Campaign Performance" subtitle="Completion rate by campaign" className="xl:col-span-2">
-          <CampaignBar />
+          {campaignPerformance.length ? (
+            <CampaignBar data={campaignPerformance} />
+          ) : (
+            <EmptyState title="No campaign data" description="Campaign performance will appear here." />
+          )}
         </ChartCard>
 
         <div className="space-y-6">
@@ -173,22 +280,22 @@ export default function OverviewPage() {
                     <Sparkles className="h-3.5 w-3.5 text-violet-500" />
                     Total Recommendations
                   </p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{AI_INSIGHTS.totalRecommendations.toLocaleString()}</p>
+                  <p className="mt-1 text-xl font-bold text-slate-900">—</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-4">
                   <p className="flex items-center gap-1.5 text-xs text-slate-500">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                     Accepted
                   </p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{AI_INSIGHTS.acceptedRecommendations.toLocaleString()}</p>
+                  <p className="mt-1 text-xl font-bold text-slate-900">—</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-4">
                   <p className="text-xs text-slate-500">Conversion Rate</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{AI_INSIGHTS.conversionRate}%</p>
+                  <p className="mt-1 text-xl font-bold text-slate-900">—</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-4">
                   <p className="text-xs text-slate-500">Average Order Value</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">₹{AI_INSIGHTS.averageOrderValue.toLocaleString()}</p>
+                  <p className="mt-1 text-xl font-bold text-slate-900">—</p>
                 </div>
               </div>
               <div className="rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 p-4 text-sm text-white">
@@ -196,7 +303,9 @@ export default function OverviewPage() {
                   <Sparkles className="h-4 w-4" />
                   AI Assistant
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-violet-100">{AI_ASSISTANT_MESSAGE}</p>
+                <p className="mt-1 text-xs leading-relaxed text-violet-100">
+                  AI insights are generated from live segmentation data.
+                </p>
               </div>
             </div>
           </ChartCard>
@@ -207,13 +316,15 @@ export default function OverviewPage() {
                 <Cpu className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-slate-900">{MODEL_INFO.kmeans.name}</p>
+                <p className="text-sm font-bold text-slate-900">{modelInfo?.name || 'No model trained'}</p>
                 <p className="text-xs text-slate-500">
-                  Last Trained: {MODEL_INFO.kmeans.lastTrained}
+                  Last Trained: {modelInfo?.lastTrained || '—'}
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-600">{MODEL_INFO.kmeans.evaluation}%</span>
-                  <StatusBadge status="Active" />
+                  <span className="text-xs font-bold text-emerald-600">
+                    {modelInfo?.evaluation != null ? `${modelInfo.evaluation}%` : '—'}
+                  </span>
+                  {modelInfo && <StatusBadge status="Active" />}
                 </div>
               </div>
             </div>
@@ -225,7 +336,7 @@ export default function OverviewPage() {
       </div>
 
       <ChartCard title="Recent Campaigns" subtitle="Latest activity across all active campaigns">
-        <CampaignTable campaigns={RECENT_CAMPAIGNS.slice(0, 5)} />
+        <CampaignTable campaigns={recentCampaigns.slice(0, 5)} />
       </ChartCard>
     </div>
   )

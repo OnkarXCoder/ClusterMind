@@ -1,30 +1,37 @@
 import { useEffect, useState } from 'react'
-import { Plus, Edit3, Trash2, Eye, Clock } from 'lucide-react'
+import { Plus, Edit3, Trash2, Eye, Clock, Users, ShieldCheck, Mail, UserRound, CheckCircle2 } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import SearchBar from '../../components/marketing/SearchBar'
 import Modal from '../../components/marketing/Modal'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminTeamUsers, getAdminActivityLogs } from '../../api'
-import { USER_ROLES, ADMIN_USERS as MOCK_ADMIN_USERS, ACTIVITY_LOGS as MOCK_ACTIVITY_LOGS } from '../../data/adminMockData'
+import EmptyState from '../../components/marketing/EmptyState'
+import { createAdminTeamUser, deleteAdminTeamUser, getAdminTeamUsers, getAdminActivityLogs, updateAdminTeamUser } from '../../api'
 
 export default function AdminUserManagementPage() {
   const { show } = useToast()
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('users')
   const [showAddUser, setShowAddUser] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
   const [viewUser, setViewUser] = useState(null)
   const [userForm, setUserForm] = useState({ name: '', email: '', role: '' })
-  const [adminUsers, setAdminUsers] = useState(MOCK_ADMIN_USERS)
-  const [activityLogs, setActivityLogs] = useState(MOCK_ACTIVITY_LOGS)
+  const [adminUsers, setAdminUsers] = useState([])
+  const [activityLogs, setActivityLogs] = useState([])
+  const [roles, setRoles] = useState([])
 
   const load = () => {
     getAdminTeamUsers().then((res) => {
-      if (res) setAdminUsers(res.map((u) => ({ ...u, id: u.userId ?? u.id })))
+      const users = Array.isArray(res) ? res : res?.users
+      if (Array.isArray(users)) {
+        setAdminUsers(users.map((u) => ({ ...u, id: u.userId ?? u.id ?? u._id })))
+      }
+      const rawRoles = Array.isArray(res?.roles) ? res.roles : []
+      setRoles(rawRoles.map((r) => (typeof r === 'string' ? { name: r } : r)))
     })
     getAdminActivityLogs().then((res) => {
-      if (res) setActivityLogs(res.map((l) => ({ ...l, id: l._id ?? l.id })))
+      if (Array.isArray(res)) setActivityLogs(res.map((l) => ({ ...l, id: l._id ?? l.id })))
     })
   }
 
@@ -32,19 +39,69 @@ export default function AdminUserManagementPage() {
 
   const filteredUsers = adminUsers.filter(
     (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.role.toLowerCase().includes(search.toLowerCase()),
+      String(u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      String(u.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      String(u.role || '').toLowerCase().includes(search.toLowerCase()),
   )
 
-  const handleAddUser = () => {
-    if (!userForm.name || !userForm.email || !userForm.role) {
+  const handleAddUser = async () => {
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.role) {
       show('Please fill all fields', 'error')
       return
     }
-    show(`User "${userForm.name}" added (demo)`, 'success')
-    setShowAddUser(false)
-    setUserForm({ name: '', email: '', role: '' })
+
+    try {
+      const created = await createAdminTeamUser(userForm)
+      if (!created) throw new Error('Unable to create user')
+      const normalized = { ...created, id: created.userId ?? created.id ?? created._id }
+      setAdminUsers((users) => [normalized, ...users])
+      show(`User "${normalized.name}" added successfully`, 'success')
+      setShowAddUser(false)
+      setUserForm({ name: '', email: '', role: '' })
+      load()
+    } catch (err) {
+      show(err.message || 'Unable to create user', 'error')
+    }
+  }
+
+  const openEditUser = (user) => {
+    setEditingUser(user)
+    setUserForm({
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || '',
+      status: user.status || 'Active',
+    })
+  }
+
+  const handleUpdateUser = async () => {
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.role) {
+      show('Please fill name, email and role', 'error')
+      return
+    }
+    try {
+      const updated = await updateAdminTeamUser(editingUser.id, userForm)
+      if (!updated) throw new Error('Unable to save user changes')
+      const normalized = { ...updated, id: updated.userId ?? updated.id ?? updated._id }
+      setAdminUsers((users) => users.map((user) => user.id === editingUser.id ? normalized : user))
+      show(`User "${normalized.name}" updated successfully`, 'success')
+      setEditingUser(null)
+      setUserForm({ name: '', email: '', role: '' })
+    } catch (err) {
+      show(err.message || 'Unable to update user', 'error')
+    }
+  }
+
+  const handleDeleteUser = async (user) => {
+    try {
+      const deleted = await deleteAdminTeamUser(user.id)
+      if (!deleted) throw new Error('Unable to delete user')
+      setAdminUsers((users) => users.filter((item) => item.id !== user.id))
+      show(`User "${user.name}" deleted successfully`, 'success')
+      load()
+    } catch (err) {
+      show(err.message || 'Unable to delete user', 'error')
+    }
   }
 
   const tabs = [
@@ -54,66 +111,66 @@ export default function AdminUserManagementPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon purple"><Users size={24} /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">User & Role Management</h2>
-          <p className="text-sm text-slate-500">{adminUsers.length} admin users, {USER_ROLES.length} roles</p>
+          <h2 className="dm-hero-title">User & Role Management</h2>
+          <p className="dm-hero-sub">{adminUsers.length} admin users, {roles.length} roles</p>
         </div>
-        <div className="flex items-center gap-3">
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div className="dm-tabs">
+          {tabs.map((t) => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)} className={`dm-tab ${activeTab === t.key ? 'active' : ''}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <SearchBar value={search} onChange={setSearch} placeholder="Search users..." className="w-64" />
-          <Button icon={Plus} onClick={() => activeTab === 'users' ? setShowAddUser(true) : show('Add role (demo)', 'info')}>
+          <Button icon={Plus} onClick={() => activeTab === 'users' ? setShowAddUser(true) : show('Roles are managed from backend seed/config data.', 'info')}>
             {activeTab === 'users' ? 'Add User' : 'Add Role'}
           </Button>
         </div>
       </div>
 
-      <div className="flex gap-2">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              activeTab === t.key
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {activeTab === 'users' && (
         <ChartCard title="Admin Users" subtitle="Manage administrator accounts">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="dm-table-wrap">
+            <table className="dm-table">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">ID</th>
-                  <th className="px-5 py-3.5 font-semibold">Name</th>
-                  <th className="px-5 py-3.5 font-semibold">Email</th>
-                  <th className="px-5 py-3.5 font-semibold">Role</th>
-                  <th className="px-5 py-3.5 font-semibold">Status</th>
-                  <th className="px-5 py-3.5 font-semibold">Last Login</th>
-                  <th className="px-5 py-3.5 font-semibold">Actions</th>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>No admin users found</td>
+                  </tr>
+                )}
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="transition hover:bg-slate-50">
-                    <td className="px-5 py-4 font-semibold text-slate-900">{u.id}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-900">{u.name}</td>
-                    <td className="px-5 py-4 text-slate-500">{u.email}</td>
-                    <td className="px-5 py-4"><StatusBadge status={u.role.includes('Super') ? 'Active' : u.role.includes('Admin') ? 'Completed' : u.role.includes('Marketing') ? 'Scheduled' : 'Draft'} /></td>
-                    <td className="px-5 py-4"><StatusBadge status={u.status} /></td>
-                    <td className="px-5 py-4 text-slate-500">{u.lastLogin}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1.5">
+                  <tr key={u.id}>
+                    <td style={{ fontWeight: 700 }}>{u.id}</td>
+                    <td style={{ fontWeight: 700, color: '#1E293B' }}>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td><StatusBadge status={String(u.role || '').includes('Super') ? 'Active' : String(u.role || '').includes('Admin') ? 'Completed' : String(u.role || '').includes('Marketing') ? 'Scheduled' : 'Draft'} /></td>
+                    <td><StatusBadge status={u.status} /></td>
+                    <td>{u.lastLogin}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
                         <Button variant="ghost" size="sm" icon={Eye} onClick={() => setViewUser(u)}>View</Button>
-                        <Button variant="ghost" size="sm" icon={Edit3} onClick={() => show('Edit user (demo)', 'info')}>Edit</Button>
-                        <button onClick={() => show(`Deleted user "${u.name}" (demo)`, 'success')} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500">
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" icon={Edit3} onClick={() => openEditUser(u)}>Edit</Button>
+                        <button onClick={() => handleDeleteUser(u)} style={{ padding: 6, borderRadius: 8, border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer' }}>
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -126,51 +183,60 @@ export default function AdminUserManagementPage() {
       )}
 
       {activeTab === 'roles' && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {USER_ROLES.map((r, i) => (
-            <ChartCard key={i} title={r.name} subtitle={`${r.users} users`}>
-              <div className="space-y-3">
-                <p className="text-sm text-slate-600">{r.description}</p>
-                <div className="rounded-xl bg-slate-50 px-4 py-3">
-                  <p className="text-xs text-slate-500">Permissions</p>
-                  <p className="mt-0.5 text-sm font-bold text-slate-900">{r.permissions}</p>
+        roles.length === 0 ? (
+          <EmptyState title="No roles configured" description="Roles are read from backend configuration." />
+        ) : (
+          <div className="dm-grid-3">
+            {roles.map((r, i) => (
+              <ChartCard key={i} title={r.name} subtitle={r.users != null ? `${r.users} users` : 'Role'}>
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600">{r.description || 'Role configured in the backend.'}</p>
+                  <div className="rounded-xl bg-slate-50 px-4 py-3">
+                    <p className="text-xs text-slate-500">Permissions</p>
+                    <p className="mt-0.5 text-sm font-bold text-slate-900">{r.permissions || '—'}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" icon={Edit3} onClick={() => show('Role permissions are read from backend configuration.', 'info')}>Edit</Button>
+                    {r.name !== 'Super Admin' && (
+                      <Button size="sm" variant="ghost" icon={Trash2} onClick={() => show('Role deletion requires a backend permissions endpoint.', 'info')}>Delete</Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" icon={Edit3} onClick={() => show('Edit role (demo)', 'info')}>Edit</Button>
-                  {r.name !== 'Super Admin' && (
-                    <Button size="sm" variant="ghost" icon={Trash2} onClick={() => show(`Deleted role "${r.name}" (demo)`, 'success')}>Delete</Button>
-                  )}
-                </div>
-              </div>
-            </ChartCard>
-          ))}
-        </div>
+              </ChartCard>
+            ))}
+          </div>
+        )
       )}
 
       {activeTab === 'logs' && (
         <ChartCard title="Activity Logs" subtitle="Recent admin activity">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="dm-table-wrap">
+            <table className="dm-table">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">User</th>
-                  <th className="px-5 py-3.5 font-semibold">Action</th>
-                  <th className="px-5 py-3.5 font-semibold">Timestamp</th>
-                  <th className="px-5 py-3.5 font-semibold">IP</th>
+                <tr>
+                  <th>User</th>
+                  <th>Action</th>
+                  <th>Timestamp</th>
+                  <th>IP</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
+                {activityLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '40px 20px', color: '#94A3B8' }}>No activity logs found</td>
+                  </tr>
+                )}
                 {activityLogs.map((l) => (
-                  <tr key={l.id} className="transition hover:bg-slate-50">
-                    <td className="px-5 py-4 font-semibold text-slate-900">{l.user}</td>
-                    <td className="px-5 py-4 text-slate-600">{l.action}</td>
-                    <td className="px-5 py-4">
-                      <span className="flex items-center gap-1.5 text-slate-500">
-                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  <tr key={l.id}>
+                    <td style={{ fontWeight: 700 }}>{l.user}</td>
+                    <td>{l.action}</td>
+                    <td>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={14} />
                         {l.timestamp}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-500">{l.ip}</td>
+                    <td>{l.ip || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -180,34 +246,83 @@ export default function AdminUserManagementPage() {
       )}
 
       <Modal
-        open={showAddUser}
-        onClose={() => setShowAddUser(false)}
-        title="Add Admin User"
-        subtitle="Create a new admin account"
+        open={showAddUser || !!editingUser}
+        onClose={() => {
+          setShowAddUser(false)
+          setEditingUser(null)
+        }}
+        title={editingUser ? 'Edit Admin User' : 'Create Admin User'}
+        subtitle={editingUser ? 'Update account details and permissions' : 'Set up a secure administrator account'}
+        size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowAddUser(false)}>Cancel</Button>
-            <Button onClick={handleAddUser}>Add User</Button>
+            <Button variant="secondary" onClick={() => {
+              setShowAddUser(false)
+              setEditingUser(null)
+            }}>Cancel</Button>
+            <Button onClick={editingUser ? handleUpdateUser : handleAddUser}>{editingUser ? 'Save Changes' : 'Add User'}</Button>
           </>
         }
       >
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Name *</label>
-            <input value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" placeholder="Full name" />
+        <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-indigo-50/60 p-4">
+          <div className="mb-5 flex items-center gap-2 border-b border-slate-200 pb-3">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            <span className="ml-auto rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-400 shadow-sm">
+              {editingUser ? 'EDIT MODE' : 'NEW ACCOUNT'}
+            </span>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Email *</label>
-            <input type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" placeholder="email@example.com" />
+
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-200">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900">Account information</h4>
+              <p className="text-xs text-slate-500">All fields marked with * are required.</p>
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Role *</label>
-            <select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100">
-              <option value="">Select role</option>
-              {USER_ROLES.map((r) => (
-                <option key={r.name} value={r.name}>{r.name}</option>
-              ))}
-            </select>
+
+          <div className="space-y-5">
+            <div className="min-h-[72px]">
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                <UserRound size={14} className="text-indigo-500" /> Full name *
+              </label>
+              <input value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" placeholder="Type the administrator's name" autoFocus />
+            </div>
+            <div className="min-h-[84px]">
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                <Mail size={14} className="text-indigo-500" /> Work email *
+              </label>
+              <input type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" placeholder="name@company.com" />
+              <p className="mt-1.5 text-[11px] text-slate-400">Use a unique work email for account notifications.</p>
+            </div>
+            <div className={`grid gap-4 ${editingUser ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+              <div className="min-h-[72px]">
+                <label className="mb-1.5 block text-xs font-bold text-slate-600">Role *</label>
+                <select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+                  <option value="">Choose role</option>
+                  {roles.map((r) => (
+                    <option key={r.name} value={r.name}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              {editingUser && (
+                <div className="min-h-[72px]">
+                  <label className="mb-1.5 block text-xs font-bold text-slate-600">Account status</label>
+                  <select value={userForm.status || 'Active'} onChange={(e) => setUserForm({ ...userForm, status: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5">
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+            <p className="text-xs leading-5 text-emerald-800">Changes are saved securely and reflected in the admin users list immediately.</p>
           </div>
         </div>
       </Modal>

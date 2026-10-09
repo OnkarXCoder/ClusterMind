@@ -7,17 +7,32 @@ const formatPrice = (value) =>
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0,
-  }).format(value)
+  }).format(Number(value || 0))
+
+const formatNumber = (value) =>
+  new Intl.NumberFormat('en-IN').format(Number(value || 0))
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart()
-  const filled = Math.round(product.rating)
+  const safeProduct = {
+    id: product?.id || product?._id || '',
+    name: product?.name || 'Unnamed Product',
+    brand: product?.brand || 'Generic',
+    image: product?.image || product?.thumbnail || '',
+    price: Number(product?.price || 0),
+    oldPrice: Number(product?.oldPrice || 0),
+    discount: Number(product?.discount || 0),
+    rating: Number(product?.rating || 0),
+    reviews: Number(product?.reviews || 0),
+    aiRecommended: Boolean(product?.aiRecommended),
+  }
+  const filled = Math.round(safeProduct.rating)
 
   return (
     <article className="amazon-product-card">
-      <Link to={`/products/${product.id}`} className="amazon-product-image">
-        <img src={product.image} alt={product.name} loading="lazy" />
-        {product.aiRecommended && (
+      <Link to={`/products/${safeProduct.id}`} className="amazon-product-image">
+        <img src={safeProduct.image} alt={safeProduct.name} loading="lazy" />
+        {safeProduct.aiRecommended && (
           <span className="amazon-ai-badge">
             <Sparkles size={13} />
             AI pick
@@ -26,12 +41,12 @@ export default function ProductCard({ product }) {
       </Link>
 
       <div className="amazon-product-body">
-        <p className="amazon-brand-name">{product.brand}</p>
-        <Link to={`/products/${product.id}`} className="amazon-product-title">
-          {product.name}
+        <p className="amazon-brand-name">{safeProduct.brand}</p>
+        <Link to={`/products/${safeProduct.id}`} className="amazon-product-title">
+          {safeProduct.name}
         </Link>
 
-        <div className="amazon-rating" aria-label={`${product.rating} out of 5 stars`}>
+        <div className="amazon-rating" aria-label={`${safeProduct.rating} out of 5 stars`}>
           <span>
             {Array.from({ length: 5 }).map((_, i) => (
               <Star
@@ -41,21 +56,21 @@ export default function ProductCard({ product }) {
               />
             ))}
           </span>
-          <strong>{product.rating}</strong>
-          <em>{product.reviews.toLocaleString()}</em>
+          <strong>{safeProduct.rating}</strong>
+          <em>{formatNumber(safeProduct.reviews)}</em>
         </div>
 
         <div className="amazon-price-row">
-          <strong>{formatPrice(product.price)}</strong>
-          {product.oldPrice && <span>{formatPrice(product.oldPrice)}</span>}
+          <strong>{formatPrice(safeProduct.price)}</strong>
+          {safeProduct.oldPrice > safeProduct.price && <span>{formatPrice(safeProduct.oldPrice)}</span>}
         </div>
 
         <div className="amazon-offer-row">
-          {product.discount > 0 && <span>{product.discount}% off</span>}
+          {safeProduct.discount > 0 && <span>{safeProduct.discount}% off</span>}
           <p>FREE delivery</p>
         </div>
 
-        <button type="button" onClick={() => addToCart(product)}>
+        <button type="button" onClick={() => addToCart({ ...product, ...safeProduct })}>
           <ShoppingCart size={17} />
           Add to Cart
         </button>

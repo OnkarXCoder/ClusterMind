@@ -1,176 +1,332 @@
 import { useEffect, useState } from 'react'
-import { Database, Cpu, Play, BarChart3, Eye, RefreshCw } from 'lucide-react'
+import { Database, Cpu, Play, BarChart3, Eye, RefreshCw, Users } from 'lucide-react'
 import ChartCard from '../../components/marketing/ChartCard'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminMlModels } from '../../api'
-import { MODELS as MOCK_ML_MODELS, DATASET } from '../../data/marketingMockData'
-import { PREDICTION_LOGS as MOCK_PREDICTION_LOGS } from '../../data/adminMockData'
+import { getAdminMlModels, getDataset, syncCustomerDataset, trainModel } from '../../api'
+
+const fallbackDetails = {
+  kmeans: {
+    bestFor: 'Primary customer segmentation',
+    output: 'Segment labels, cluster centers, customer scatter plot',
+    features: ['Age', 'Spend', 'Rating', 'Previous purchases', 'Subscription', 'Discount usage', 'Frequency'],
+  },
+  dbscan: {
+    bestFor: 'Outlier detection',
+    output: 'Dense groups plus outlier users',
+    features: ['Normalized customer behaviour', 'Neighbour distance', 'Minimum cluster size'],
+  },
+  hierarchical: {
+    bestFor: 'Explainable segment hierarchy',
+    output: 'Nested customer groups',
+    features: ['Customer distance', 'Average linkage', 'Requested cluster count'],
+  },
+  pca: {
+    bestFor: 'Visualizing customer clusters',
+    output: '2D customer map and variance score',
+    features: ['Principal components', 'Feature compression', 'Projected users'],
+  },
+}
+
+const keyForModel = (model) => {
+  const text = `${model.key || ''} ${model.name || ''}`.toLowerCase()
+  if (text.includes('dbscan')) return 'dbscan'
+  if (text.includes('hierarchical')) return 'hierarchical'
+  if (text.includes('pca')) return 'pca'
+  return 'kmeans'
+}
+
+const numericScore = (model) => {
+  const value = model.accuracy ?? model.evaluation
+  const numeric = Number(String(value ?? '').replace('%', ''))
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
+const formatScore = (model) => {
+  const value = model.accuracy ?? model.evaluation
+  if (value === undefined || value === null || value === '' || value === '-') return '-'
+  return String(value).includes('%') ? String(value) : `${value}%`
+}
 
 export default function AdminModelManagementPage() {
   const { show } = useToast()
   const [activeTab, setActiveTab] = useState('models')
-  const [models, setModels] = useState(MOCK_ML_MODELS)
-  const [predictionLogs, setPredictionLogs] = useState(MOCK_PREDICTION_LOGS)
+  const [models, setModels] = useState([])
+  const [dataset, setDataset] = useState(null)
+  const [predictionLogs, setPredictionLogs] = useState([])
+  const [training, setTraining] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  const loadModels = async () => {
+    setLoading(true)
+    const [liveModels, liveDataset, adminMl] = await Promise.all([
+      getAdminMlModels(),
+      getDataset(),
+      getAdminMlModels(),
+    ]).catch(() => [null, null, null])
+    const modelsRes = liveModels?.models || liveModels || adminMl?.models || []
+    setModels(modelsRes)
+    if (liveDataset) setDataset(liveDataset)
+    else if (adminMl?.dataset) setDataset(adminMl.dataset)
+    setPredictionLogs(adminMl?.predictionLogs || [])
+    setLoading(false)
+  }
 
   useEffect(() => {
-    getAdminMlModels().then((res) => {
-      if (res) {
-        setModels(res.models)
-        if (res.predictionLogs) setPredictionLogs(res.predictionLogs)
-      }
-    })
+    loadModels()
   }, [])
+
+  const handleSyncCustomers = async () => {
+    const synced = await syncCustomerDataset()
+    if (!synced) {
+      show('Could not sync MongoDB customers. Check backend data and login token.', 'error')
+      return
+    }
+    setDataset(synced)
+    await loadModels()
+    show(`Synced ${synced.records} customers into the ML dataset.`, 'success')
+  }
+
+  const handleTrain = async (model = models[0]) => {
+    const algorithm = keyForModel(model)
+    setTraining(algorithm)
+    const trained = await trainModel(algorithm, model.clusters || 5)
+    await loadModels()
+    setTraining('')
+    show(
+      trained ? `${trained.name} trained on ${trained.rows} customers.` : 'Training failed. Sync customers or restore a dataset first.',
+      trained ? 'success' : 'error',
+    )
+  }
 
   const tabs = [
     { key: 'models', label: 'Models', icon: Cpu },
     { key: 'dataset', label: 'Dataset', icon: Database },
     { key: 'predictions', label: 'Prediction Logs', icon: BarChart3 },
   ]
+  const activeModels = models.filter((m) => m.status === 'Active').length
+  const averageAccuracy = models
+    .filter((m) => numericScore(m))
+    .reduce((total, m, _, arr) => total + numericScore(m) / arr.length, 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="dm-page admin-model-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon purple"><Cpu size={24} /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">AI/ML Model Management</h2>
-          <p className="text-sm text-slate-500">Train, evaluate, and manage machine learning models</p>
+          <h2 className="dm-hero-title">AI/ML Model Management</h2>
+          <p className="dm-hero-sub">Train, evaluate, explain, and run clustering for all customers</p>
         </div>
-        <Button icon={Play} onClick={() => show('Model training queued (demo)', 'success')}>Train Model</Button>
       </div>
 
-      <div className="flex gap-2">
+      <div className="model-toolbar">
+        <Button variant="secondary" icon={Users} onClick={handleSyncCustomers}>Sync All Customers</Button>
+        <Button icon={Play} onClick={() => models[0] && handleTrain(models[0])} disabled={Boolean(training)}>
+          {training ? 'Training...' : 'Train Active Model'}
+        </Button>
+      </div>
+
+      <div className="dm-tabs">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              activeTab === t.key
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
-            }`}
+            className={`dm-tab ${activeTab === t.key ? 'active' : ''}`}
           >
-            <t.icon className="h-4 w-4" />
+            <t.icon size={14} />
             {t.label}
           </button>
         ))}
       </div>
 
       {activeTab === 'models' && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {models.map((m, i) => (
-            <ChartCard key={i} title={m.name} subtitle={m.type} action={<StatusBadge status={m.status} />}>
-              <div className="space-y-3">
-                <p className="text-sm text-slate-600">{m.description}</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">Last Trained</p>
-                    <p className="mt-0.5 text-sm font-bold text-slate-900">{m.lastTrained}</p>
+        <>
+          {loading && <LoadingState label="Loading models..." />}
+          {!loading && models.length === 0 && (
+            <EmptyState
+              title="No models"
+              description="ML models are not available yet."
+            />
+          )}
+          {!loading && models.length > 0 && (
+          <>
+          <div className="model-health-strip">
+            <div>
+              <span>Active models</span>
+              <strong>{activeModels}/{models.length}</strong>
+            </div>
+            <div>
+              <span>Customers analyzed</span>
+              <strong>{dataset?.records?.toLocaleString?.() || dataset?.records || '-'}</strong>
+            </div>
+            <div>
+              <span>Avg score</span>
+              <strong>{averageAccuracy ? `${averageAccuracy.toFixed(1)}%` : '-'}</strong>
+            </div>
+          </div>
+
+          <div className="model-card-grid">
+            {models.map((m, i) => {
+              const key = keyForModel(m)
+              const details = { ...fallbackDetails[key], ...m }
+              return (
+                <article key={m.key || m.name || i} className={`model-card ${m.status === 'Active' ? 'is-active' : ''}`}>
+                  <div className="model-card-head">
+                    <div>
+                      <h3>{m.name}</h3>
+                      <p>{m.type}</p>
+                    </div>
+                    <StatusBadge status={m.status} />
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">Accuracy</p>
-                    <p className="mt-0.5 text-sm font-bold text-slate-900">{m.accuracy ? `${m.accuracy}%` : '—'}</p>
+
+                  <p className="model-card-description">{m.description}</p>
+
+                  <div className="model-info-panel">
+                    <p><strong>Best for:</strong> {details.bestFor}</p>
+                    <p><strong>Output:</strong> {details.output}</p>
+                    <div>
+                      <strong>Uses:</strong>
+                      <div className="model-feature-list">
+                        {(details.features || []).map((feature) => <span key={feature}>{feature}</span>)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">Clusters</p>
-                    <p className="mt-0.5 text-sm font-bold text-slate-900">{m.clusters || '—'}</p>
+
+                  <div className="model-metric-grid">
+                    <div>
+                      <span>Last Trained</span>
+                      <strong>{m.lastTrained || '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Score</span>
+                      <strong>{formatScore(m)}</strong>
+                    </div>
+                    <div>
+                      <span>Clusters</span>
+                      <strong>{m.clusters || '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Algorithm</span>
+                      <strong>{key.toUpperCase()}</strong>
+                    </div>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">Type</p>
-                    <p className="mt-0.5 text-sm font-bold text-slate-900">{m.type}</p>
+
+                  <div className="model-card-actions">
+                    <Button size="sm" icon={m.status === 'Active' ? RefreshCw : Play} onClick={() => handleTrain(m)} disabled={training === key}>
+                      {training === key ? 'Training...' : m.status === 'Active' ? 'Retrain' : 'Train Now'}
+                    </Button>
+                    <Button size="sm" variant="secondary" icon={Eye} onClick={() => show(`${m.name} uses ${dataset.records || 0} customer rows from ${dataset.name}.`, 'info')}>
+                      Explain
+                    </Button>
                   </div>
-                </div>
-                {m.status === 'Active' && (
-                  <div className="flex gap-2">
-                    <Button size="sm" icon={RefreshCw} onClick={() => show(`${m.name} retraining (demo)`, 'success')}>Retrain</Button>
-                    <Button size="sm" variant="secondary" icon={Eye} onClick={() => show('Compare view (demo)', 'info')}>Compare</Button>
-                  </div>
-                )}
-                {m.status === 'Available' && (
-                  <Button size="sm" icon={Play} onClick={() => show(`${m.name} training started (demo)`, 'success')}>Train Now</Button>
-                )}
-              </div>
-            </ChartCard>
-          ))}
-        </div>
+                </article>
+              )
+            })}
+          </div>
+        </>
+          )}
+        </>
       )}
 
       {activeTab === 'dataset' && (
-        <ChartCard title="Dataset Management" subtitle="Current training dataset">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">Dataset Name</p>
-              <p className="mt-1 text-sm font-bold text-slate-900">{DATASET.name}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">Records</p>
-              <p className="mt-1 text-sm font-bold text-slate-900">{DATASET.records.toLocaleString()}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">Columns</p>
-              <p className="mt-1 text-sm font-bold text-slate-900">{DATASET.columns}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">Upload Date</p>
-              <p className="mt-1 text-sm font-bold text-slate-900">{DATASET.uploadDate}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">Status</p>
-              <div className="mt-1"><StatusBadge status={DATASET.status} /></div>
-            </div>
-          </div>
-          <div className="mt-4">
-            <h4 className="mb-2 text-sm font-bold text-slate-900">Data Preview</h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 uppercase text-slate-500">
-                    {DATASET.preview.length > 0 && Object.keys(DATASET.preview[0]).map((k) => (
-                      <th key={k} className="px-3 py-2.5 font-semibold">{k}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {DATASET.preview.map((row, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      {Object.values(row).map((val, j) => (
-                        <td key={j} className="px-3 py-2 text-slate-600">{val}</td>
+        <ChartCard title="Dataset Management" subtitle="Current clustering dataset">
+          {loading ? (
+            <LoadingState label="Loading dataset..." />
+          ) : !dataset ? (
+            <EmptyState
+              title="No dataset"
+              description="No dataset is available yet. Try syncing customers or uploading a dataset."
+            />
+          ) : (
+            <>
+              <div className="dm-grid-3">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs text-slate-500">Dataset Name</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">{dataset.name}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs text-slate-500">Records</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">{Number(dataset.records || 0).toLocaleString()}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs text-slate-500">Columns</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">{dataset.columns}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs text-slate-500">Upload Date</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">{dataset.uploadDate}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-xs text-slate-500">Status</p>
+                  <div className="mt-1"><StatusBadge status={dataset.status} /></div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <h4 className="mb-2 text-sm font-bold text-slate-900">Data Preview</h4>
+                <div className="dm-table-wrap">
+                  <table className="dm-table">
+                    <thead>
+                      <tr>
+                        {dataset.preview?.length > 0 && Object.keys(dataset.preview[0]).map((k) => (
+                          <th key={k}>{k}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dataset.preview || []).map((row, i) => (
+                        <tr key={i}>
+                          {Object.values(row).map((val, j) => (
+                            <td key={j}>{val}</td>
+                          ))}
+                        </tr>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </ChartCard>
       )}
 
       {activeTab === 'predictions' && (
         <ChartCard title="Prediction Logs" subtitle="Recent model predictions">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">Model</th>
-                  <th className="px-5 py-3.5 font-semibold">Input</th>
-                  <th className="px-5 py-3.5 font-semibold">Prediction</th>
-                  <th className="px-5 py-3.5 font-semibold">Confidence</th>
-                  <th className="px-5 py-3.5 font-semibold">Timestamp</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {predictionLogs.map((p) => (
-                  <tr key={p.id} className="transition hover:bg-slate-50">
-                    <td className="px-5 py-4 font-semibold text-slate-900">{p.model}</td>
-                    <td className="px-5 py-4 text-slate-600">{p.input}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-900">{p.prediction}</td>
-                    <td className="px-5 py-4 text-slate-700">{p.confidence}</td>
-                    <td className="px-5 py-4 text-slate-500">{p.timestamp}</td>
+          {loading ? (
+            <LoadingState label="Loading prediction logs..." />
+          ) : predictionLogs.length === 0 ? (
+            <EmptyState
+              title="No prediction logs"
+              description="No prediction logs are available yet."
+            />
+          ) : (
+            <div className="dm-table-wrap">
+              <table className="dm-table">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Input</th>
+                    <th>Prediction</th>
+                    <th>Confidence</th>
+                    <th>Timestamp</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {predictionLogs.map((p) => (
+                    <tr key={p.id || p._id}>
+                      <td style={{ fontWeight: 700 }}>{p.model}</td>
+                      <td>{p.input}</td>
+                      <td style={{ fontWeight: 700 }}>{p.prediction}</td>
+                      <td>{p.confidence}</td>
+                      <td>{p.timestamp}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </ChartCard>
       )}
     </div>

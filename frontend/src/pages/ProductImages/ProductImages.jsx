@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Check, RotateCcw, Upload, ImageOff } from "lucide-react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Navbar from "../../components/Navbar/Navbar";
@@ -33,12 +33,26 @@ const compressImage = (img, maxSize = 900) => {
 };
 
 export default function ProductImages() {
-  const [products, setProducts] = useState(() => getProducts());
+  const [products, setProducts] = useState([]);
   const [pending, setPending] = useState({});
   const [message, setMessage] = useState("");
   const inputRefs = useRef({});
 
-  const refresh = () => setProducts(getProducts());
+  const refresh = () => {
+    getProducts().then(setProducts);
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    getProducts().then((list) => {
+      if (active) setProducts(list);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const showMessage = (text) => {
     setMessage(text);

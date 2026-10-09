@@ -1,10 +1,23 @@
 import { Link } from 'react-router-dom'
 import { LogIn, MapPin, Search, ShoppingCart, ShoppingBag } from 'lucide-react'
-import { categories } from '../data/products'
+import { useState, useEffect } from 'react'
+
+const useCategories = () => {
+  const [cats, setCats] = useState([])
+  useEffect(() => {
+    fetch('/api/products/categories')
+      .then(r => r.json())
+      .then(d => setCats(d?.categories || []))
+      .catch(() => {})
+  }, [])
+  return cats
+}
 import { useCart } from '../context/CartContext'
+import { logout } from '../services/auth'
 
 export default function Header({ search, onSearchChange, onCategorySelect }) {
   const { count, setIsOpen } = useCart()
+  const categories = useCategories()
 
   return (
     <header className="amazon-header">
@@ -42,7 +55,7 @@ export default function Header({ search, onSearchChange, onCategorySelect }) {
           </button>
         </div>
 
-        <Link to="/login" className="amazon-account">
+        <Link to="/login" className="amazon-account" onClick={logout}>
           <LogIn size={18} />
           <span>
             <small>Hello, sign in</small>

@@ -6,8 +6,8 @@ import DataTable from '../../components/marketing/DataTable'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import EmptyState from '../../components/marketing/EmptyState'
+import LoadingState from '../../components/marketing/LoadingState'
 import { useToast } from '../../components/marketing/Toast'
-import { RECOMMENDATIONS } from '../../data/marketingMockData'
 import { generateRecommendations, getRecommendations } from '../../api'
 
 const SECTIONS = [
@@ -28,9 +28,11 @@ const COLUMNS = [
 export default function RecommendationEnginePage() {
   const { show } = useToast()
   const [activeSection, setActiveSection] = useState('product')
-  const [recommendations, setRecommendations] = useState(RECOMMENDATIONS)
+  const [recommendations, setRecommendations] = useState({ stats: [] })
+  const [loading, setLoading] = useState(true)
 
   const rows = recommendations[activeSection] || []
+  const statValue = (index) => recommendations.stats?.[index]?.value ?? '—'
 
   const loadRecommendations = useCallback(async (section = activeSection) => {
     const liveRows = await getRecommendations(section)
@@ -40,7 +42,14 @@ export default function RecommendationEnginePage() {
   }, [activeSection])
 
   useEffect(() => {
-    loadRecommendations(activeSection)
+    let active = true
+    setLoading(true)
+    loadRecommendations(activeSection).finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => {
+      active = false
+    }
   }, [activeSection, loadRecommendations])
 
   const handleGenerate = async () => {
@@ -54,48 +63,52 @@ export default function RecommendationEnginePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Recommendation Engine</h2>
-          <p className="text-sm text-slate-500">Personalized recommendations driven by segment behaviour</p>
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon purple">
+          <Sparkles className="h-6 w-6" />
         </div>
+        <h2 className="dm-hero-title">Recommendation Engine</h2>
+        <p className="dm-hero-sub">Personalized recommendations driven by segment behaviour</p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button icon={Wand2} onClick={handleGenerate}>
           Generate Recommendations
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total Recommendations" value={recommendations.stats[0].value} icon={Sparkles} accent="from-violet-600 to-purple-600" />
-        <KpiCard label="Accepted Recommendations" value={recommendations.stats[1].value} icon={CheckCircle2} accent="from-emerald-500 to-teal-500" />
-        <KpiCard label="Conversion Rate" value={recommendations.stats[2].value} icon={Percent} accent="from-blue-600 to-cyan-500" />
-        <KpiCard label="Average Recommendation Value" value={recommendations.stats[3].value} icon={Banknote} accent="from-amber-500 to-orange-500" />
+        <KpiCard label="Total Recommendations" value={statValue(0)} icon={Sparkles} accent="from-violet-600 to-purple-600" />
+        <KpiCard label="Accepted Recommendations" value={statValue(1)} icon={CheckCircle2} accent="from-emerald-500 to-teal-500" />
+        <KpiCard label="Conversion Rate" value={statValue(2)} icon={Percent} accent="from-blue-600 to-cyan-500" />
+        <KpiCard label="Average Recommendation Value" value={statValue(3)} icon={Banknote} accent="from-amber-500 to-orange-500" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {SECTIONS.map(({ id, title, icon: Icon, accent }) => (
+      <div className="dm-tabs">
+        {SECTIONS.map(({ id, title, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveSection(id)}
-            className={`flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
-              activeSection === id
-                ? 'border-violet-500 bg-violet-50 shadow-lg shadow-violet-500/10'
-                : 'border-slate-200 bg-white hover:border-violet-300'
-            }`}
+            className={`dm-tab ${activeSection === id ? 'active' : ''}`}
           >
-            <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${accent} text-white`}>
-              <Icon className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900">{title}</p>
-              <p className="text-xs text-slate-500">{(recommendations[id] || []).length} active</p>
-            </div>
+            <Icon className="h-4 w-4" />
+            {title}
           </button>
         ))}
       </div>
 
       <ChartCard title={`${SECTIONS.find((s) => s.id === activeSection).title} · List`} subtitle="Live recommendations for this category">
-        {rows.length ? <DataTable columns={COLUMNS} rows={rows} /> : <EmptyState />}
+        {loading ? (
+          <LoadingState label="Loading recommendations..." />
+        ) : rows.length ? (
+          <DataTable columns={COLUMNS} rows={rows} />
+        ) : (
+          <EmptyState
+            title="No recommendations"
+            description="Generate recommendations from the active dataset to see results."
+          />
+        )}
       </ChartCard>
     </div>
   )

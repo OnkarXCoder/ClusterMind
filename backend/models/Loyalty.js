@@ -15,6 +15,10 @@ const loyaltySchema = new mongoose.Schema(
       default: 'bronze',
     },
     rewards: [{ type: String }],
+    pointsEarned: { type: Number, default: 0 },
+    pointsRedeemed: { type: Number, default: 0 },
+    lastActivity: { type: String },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'MarketingTeam' },
   },
   { timestamps: true }
 )

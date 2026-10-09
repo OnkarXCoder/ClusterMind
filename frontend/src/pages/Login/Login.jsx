@@ -29,7 +29,7 @@ export default function Login() {
       const user = await fakeLogin({ identifier: contact, password });
       if (user?.role === "marketing" || user?.role === "aiml") navigate("/marketing");
       else if (user?.role === "admin") navigate("/admin");
-      else navigate("/");
+      else navigate("/dashboard");
     } catch (errObj) {
       setErrors(errObj);
     } finally {

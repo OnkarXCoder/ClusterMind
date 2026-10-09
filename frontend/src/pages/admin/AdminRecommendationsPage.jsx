@@ -5,18 +5,36 @@ import ChartCard from '../../components/marketing/ChartCard'
 import DataTable from '../../components/marketing/DataTable'
 import Button from '../../components/marketing/Button'
 import StatusBadge from '../../components/marketing/StatusBadge'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
 import { getAdminRecommendations } from '../../api'
-import { AI_RECOMMENDATIONS as MOCK_AI_RECOMMENDATIONS } from '../../data/adminMockData'
 
 export default function AdminRecommendationsPage() {
   const { show } = useToast()
   const [activeTab, setActiveTab] = useState('product')
-  const [data, setData] = useState(MOCK_AI_RECOMMENDATIONS)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getAdminRecommendations().then((res) => res && setData(res))
+    let active = true
+    getAdminRecommendations()
+      .then((res) => { if (active && res) setData(res) })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
+
+  if (loading) return <LoadingState label="Loading recommendations..." />
+
+  if (!data) {
+    return (
+      <EmptyState
+        title="No recommendations"
+        description="AI recommendations are not available yet."
+      />
+    )
+  }
 
   const tabs = [
     { key: 'product', label: 'Product Recommendations' },
@@ -63,19 +81,21 @@ export default function AdminRecommendationsPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon green"><Sparkles size={24} /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">AI Recommendation Engine</h2>
-          <p className="text-sm text-slate-500">AI-powered personalized product and offer recommendations</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" icon={RefreshCw} onClick={() => show('History refreshed (demo)', 'info')}>Refresh</Button>
-          <Button icon={Sparkles} onClick={() => show('Recommendations regenerated (demo)', 'success')}>Generate</Button>
+          <h2 className="dm-hero-title">AI Recommendation Engine</h2>
+          <p className="dm-hero-sub">AI-powered personalized product and offer recommendations</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <Button variant="secondary" icon={RefreshCw} onClick={() => show('History refreshed (demo)', 'info')}>Refresh</Button>
+        <Button icon={Sparkles} onClick={() => show('Recommendations regenerated (demo)', 'success')}>Generate</Button>
+      </div>
+
+      <div className="dm-grid-4">
         {data.stats.map((s, i) => {
           const icons = [Sparkles, TrendingUp, Zap, ArrowUpRight]
           const accents = ['from-red-500 to-orange-500', 'from-blue-500 to-cyan-500', 'from-emerald-500 to-teal-500', 'from-violet-500 to-purple-500']
@@ -83,16 +103,12 @@ export default function AdminRecommendationsPage() {
         })}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="dm-tabs" style={{ flexWrap: 'wrap' }}>
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              activeTab === t.key
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-white text-slate-600 hover:bg-slate-100'
-            }`}
+            className={`dm-tab ${activeTab === t.key ? 'active' : ''}`}
           >
             {t.label}
           </button>

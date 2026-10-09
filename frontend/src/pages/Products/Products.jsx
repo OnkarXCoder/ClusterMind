@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal, X } from "lucide-react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Navbar from "../../components/Navbar/Navbar";
@@ -11,6 +12,7 @@ import {
   getBrands,
   getProducts,
 } from "../../services/products";
+import "./Products.css";
 
 const emptyFilters = {
   brands: [],
@@ -20,23 +22,48 @@ const emptyFilters = {
 };
 
 export default function Products() {
-  const categories = useMemo(() => getCategories(), []);
-  const brands = useMemo(() => getBrands(), []);
-
+  const [searchParams] = useSearchParams();
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [category, setCategory] = useState("All");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(searchParams.get("q") || "");
   const [filters, setFilters] = useState(emptyFilters);
   const [showFilter, setShowFilter] = useState(false);
+  const [products, setProducts] = useState([]);
 
-  const products = useMemo(
-    () =>
-      getProducts({
+  useEffect(() => {
+    setQuery(searchParams.get("q") || "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([getCategories(), getBrands()]).then(([categoryList, brandList]) => {
+      if (!active) return;
+      setCategories(categoryList);
+      setBrands(brandList);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    getProducts({
         search: query,
         category,
         ...filters,
-      }),
-    [query, category, filters]
-  );
+      }).then((list) => {
+        if (active) setProducts(list);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [query, category, filters]);
 
   const clearAll = () => {
     setFilters(emptyFilters);

@@ -3,17 +3,35 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Menu, Bell, ChevronDown, LogOut, User } from 'lucide-react'
 import SearchBar from '../../components/marketing/SearchBar'
 import DateRangePicker from '../../components/marketing/DateRangePicker'
+import { currentMonthRange } from '../../utils/dateRange'
 import { ADMIN_NAV_ITEMS } from './AdminSidebar'
-import { ADMIN_NOTIFICATIONS, CURRENT_DATE_RANGE } from '../../data/adminMockData'
+import { getAdminNotifications } from '../../api'
 import { getCurrentUser, logout } from '../../services/auth'
 
 export default function AdminHeader({ onMenu }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [range, setRange] = useState(CURRENT_DATE_RANGE)
+  const [range, setRange] = useState(currentMonthRange())
+  const [notifications, setNotifications] = useState([])
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+
+  useEffect(() => {
+    getAdminNotifications()
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setNotifications(
+            res.map((n) => ({
+              title: n.title,
+              time: n.scheduled || (n.createdAt ? new Date(n.createdAt).toLocaleString() : ''),
+              unread: n.status === 'Scheduled',
+            })),
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
   const notifRef = useRef(null)
   const profileRef = useRef(null)
 
@@ -21,6 +39,11 @@ export default function AdminHeader({ onMenu }) {
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
   )
   const title = current?.label || 'Admin Dashboard'
+  const moduleMatches = search.trim()
+    ? ADMIN_NAV_ITEMS.filter((item) =>
+        item.label.toLowerCase().includes(search.trim().toLowerCase()),
+      ).slice(0, 5)
+    : []
 
   useEffect(() => {
     const handler = (e) => {
@@ -45,6 +68,17 @@ export default function AdminHeader({ onMenu }) {
     navigate('/login')
   }
 
+  const openModule = (to) => {
+    setSearch('')
+    navigate(to)
+  }
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Enter' && moduleMatches[0]) {
+      openModule(moduleMatches[0].to)
+    }
+  }
+
   return (
     <header className="internal-header">
       <button
@@ -61,12 +95,28 @@ export default function AdminHeader({ onMenu }) {
       </div>
 
       <div className="internal-header-actions ml-auto flex items-center gap-2.5 sm:gap-3">
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search..."
-          className="internal-header-search hidden w-44 md:block lg:w-64"
-        />
+        <div className="internal-module-search">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search modules..."
+            className="internal-header-search w-full lg:w-64"
+          />
+          {moduleMatches.length > 0 && (
+            <div className="internal-search-menu">
+              {moduleMatches.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button key={item.to} type="button" onClick={() => openModule(item.to)}>
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         <DateRangePicker value={range} onChange={setRange} />
 
@@ -81,7 +131,7 @@ export default function AdminHeader({ onMenu }) {
           >
             <Bell className="h-[18px] w-[18px]" />
             <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-              {ADMIN_NOTIFICATIONS.filter((n) => n.unread).length}
+              {notifications.filter((n) => n.unread).length}
             </span>
           </button>
 
@@ -91,7 +141,10 @@ export default function AdminHeader({ onMenu }) {
                 <p className="text-sm font-bold text-slate-900">Notifications</p>
               </div>
               <ul className="max-h-72 overflow-y-auto">
-                {ADMIN_NOTIFICATIONS.map((n, i) => (
+                {notifications.length === 0 && (
+                  <li className="px-3 py-8 text-center text-sm text-slate-400">No notifications</li>
+                )}
+                {notifications.map((n, i) => (
                   <li key={i} className="flex items-start gap-2.5 px-3 py-3 transition hover:bg-slate-50">
                     {n.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
                     <div className={n.unread ? '' : 'pl-3.5'}>

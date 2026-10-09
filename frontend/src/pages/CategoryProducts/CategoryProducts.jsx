@@ -33,6 +33,7 @@ export default function CategoryProducts() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("popular");
   const [cartCount, setCartCount] = useState(getCartCount());
+  const [products, setProducts] = useState([]);
 
   useEffect(
     () =>
@@ -44,9 +45,21 @@ export default function CategoryProducts() {
 
   const categoryName = slugToName[category];
 
-  const products = useMemo(() => {
-    let list = categoryName ? getProducts({ category: categoryName }) : [];
-    return [...list];
+  useEffect(() => {
+    let active = true;
+
+    if (!categoryName) {
+      setProducts([]);
+      return undefined;
+    }
+
+    getProducts({ category: categoryName }).then((list) => {
+      if (active) setProducts([...list]);
+    });
+
+    return () => {
+      active = false;
+    };
   }, [categoryName]);
 
   const visible = useMemo(() => {

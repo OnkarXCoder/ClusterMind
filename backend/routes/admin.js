@@ -26,6 +26,119 @@ router.use(verifyToken, requireRole('admin'))
 const asyncHandler = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next)
 
+const SEGMENT_COLORS = ['#7c3aed', '#2563eb', '#06b6d4', '#10b981', '#f97316', '#ec4899']
+
+function currency(value) {
+  return `₹${Math.round(value || 0).toLocaleString('en-IN')}`
+}
+
+function percent(part, total) {
+  return total ? Math.round((part / total) * 100) : 0
+}
+
+function buildSegmentation(customers) {
+  const groups = customers.reduce((map, customer) => {
+    const key = customer.segment || 'Unassigned'
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(customer)
+    return map
+  }, new Map())
+
+  const total = customers.length || 1
+  const segments = [...groups.entries()].map(([name, members], index) => {
+    const spend = members.reduce((sum, customer) => sum + Number(customer.totalSpent || 0), 0)
+    const orders = members.reduce((sum, customer) => sum + Number(customer.totalOrders || 0), 0)
+    return {
+      name,
+      customers: members.length,
+      percentage: percent(members.length, total),
+      avgSpending: currency(spend / Math.max(1, members.length)),
+      frequency: (orders / Math.max(1, members.length)) >= 10 ? 'High' : (orders / Math.max(1, members.length)) >= 4 ? 'Medium' : 'Low',
+      type: name,
+      color: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+    }
+  })
+
+  return {
+    segments,
+    clusters: segments.flatMap((segment, index) =>
+      Array.from({ length: Math.max(1, Math.min(8, segment.customers)) }, (_, point) => ({
+        x: index * 2 + (point % 3) + 1,
+        y: Math.max(1, segment.percentage / 10) + Math.floor(point / 3),
+        name: segment.name,
+        color: segment.color,
+      })),
+    ),
+  }
+}
+
+function buildRecommendations(segments, products, campaigns) {
+  const productRows = segments.map((segment, index) => {
+    const product = products[index % Math.max(1, products.length)]
+    return {
+      segment: segment.name,
+      item: product?.name || 'Top catalog pick',
+      reason: `${segment.customers} customers in this segment with ${segment.frequency.toLowerCase()} purchase frequency`,
+      type: 'Product',
+      status: 'Active',
+    }
+  })
+
+  const campaignRows = segments.map((segment, index) => {
+    const campaign = campaigns[index % Math.max(1, campaigns.length)]
+    return {
+      segment: segment.name,
+      item: campaign?.name || `${segment.name} campaign`,
+      reason: `Matches ${segment.percentage}% of current customers`,
+      type: 'Campaign',
+      status: campaign?.status || 'Draft',
+    }
+  })
+
+  const total = productRows.length + campaignRows.length
+  const accepted = Math.round(total * 0.42)
+
+  return {
+    stats: [
+      { label: 'Total Recommendations', value: String(total) },
+      { label: 'Accepted Recommendations', value: String(accepted) },
+      { label: 'Conversion Rate', value: `${percent(accepted, total)}%` },
+      { label: 'Average Recommendation Value', value: currency(products.reduce((sum, p) => sum + Number(p.price || 0), 0) / Math.max(1, products.length)) },
+    ],
+    product: productRows,
+    offer: segments.map((segment) => ({
+      segment: segment.name,
+      item: segment.frequency === 'High' ? 'Loyalty bonus' : 'Personalized discount',
+      reason: `${segment.frequency} engagement segment`,
+      type: 'Offer',
+      status: 'Active',
+    })),
+    crossSelling: products.slice(0, 5).map((product, index, list) => ({
+      primary: product.name,
+      cross: list[(index + 1) % list.length]?.name || 'Related product',
+      affinity: `${Math.max(35, 85 - index * 7)}%`,
+      reason: product.category ? `Same ${product.category} catalog interest` : 'Related catalog interest',
+    })),
+    upSelling: products.slice(0, 5).map((product) => ({
+      product: product.name,
+      upsell: `${product.name} premium option`,
+      priceDiff: currency(Number(product.price || 0) * 0.2),
+      conversion: `${Math.max(8, Math.round(Number(product.rating || 3) * 6))}%`,
+    })),
+    frequentlyBoughtTogether: products.slice(0, 4).map((product, index, list) => ({
+      items: [product.name, list[(index + 1) % list.length]?.name || 'Related product'].filter(Boolean),
+      frequency: Math.max(1, Number(product.reviews || 0)),
+    })),
+    history: campaigns.slice(0, 7).map((campaign) => ({
+      date: campaign.startDate || campaign.createdAt?.toLocaleDateString?.('en-IN') || 'Recent',
+      recommendations: Math.max(1, Math.round(Number(campaign.budget || 0) / 1000)),
+      accepted: Math.max(1, Math.round(Number(campaign.spent || 0) / 1000)),
+      rate: `${campaign.performance || 0}%`,
+    })),
+    campaign: campaignRows,
+  }
+}
+
 router.get(
   '/overview',
   asyncHandler(async (req, res) => {
@@ -51,30 +164,60 @@ router.get(
       totalProducts: products,
       totalOrders,
       totalRevenue,
-      customerSegments: SEGMENTATION.segments.length,
+      customerSegments: new Set(customers.map((customer) => customer.segment || 'Unassigned')).size,
       activeCampaigns: campaigns,
-      recommendationAccuracy: 92.45,
+      recommendationAccuracy: totalCustomers ? percent(customers.filter((customer) => Number(customer.totalOrders || 0) > 1).length, totalCustomers) : 0,
     }
 
+    const topCity = Object.entries(
+      customers.reduce((map, customer) => {
+        const key = customer.city || 'Unknown'
+        map[key] = (map[key] || 0) + 1
+        return map
+      }, {})
+    ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Unknown'
+
     const businessSummary = {
-      monthlyGrowth: '+12.4%',
-      customerRetention: '78.5%',
+      monthlyGrowth: totalOrders ? `${percent(orders.filter((order) => ['Delivered', 'Shipped', 'Processing'].includes(order.status)).length, totalOrders)}% fulfilled` : '0%',
+      customerRetention: `${percent(customers.filter((customer) => Number(customer.totalOrders || 0) > 1).length, totalCustomers)}%`,
       averageOrderValue: `₹${averageOrderValue.toLocaleString('en-IN')}`,
-      topCategory: 'Electronics',
-      topCity: 'Mumbai',
-      conversionRate: '6.8%',
+      topCategory: 'Live catalog',
+      topCity,
+      conversionRate: `${percent(orders.filter((order) => order.status === 'Delivered').length, totalOrders)}%`,
     }
+
+    const allProducts = await Product.find().lean()
+    const catRevenueMap = {}
+    allProducts.forEach((p) => {
+      const cat = p.category || 'Other'
+      if (!catRevenueMap[cat]) catRevenueMap[cat] = { name: cat, count: 0, catalogValue: 0 }
+      catRevenueMap[cat].count += 1
+      catRevenueMap[cat].catalogValue += Number(p.price) || 0
+    })
+
+    const totalCatalogValue = Object.values(catRevenueMap).reduce((s, c) => s + c.catalogValue, 0) || 1
+    const revenueByCategory = Object.values(catRevenueMap)
+      .map((c) => ({
+        name: c.name,
+        value: totalRevenue > 0
+          ? Math.round(totalRevenue * (c.catalogValue / totalCatalogValue))
+          : Math.round(c.catalogValue * 15),
+        count: c.count,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6)
 
     res.json({
       kpi,
       businessSummary,
+      revenueByCategory,
       recentActivities: recentActivities.map((a) => ({
         id: a._id,
         action: a.action,
         time: a.timestamp,
         type: 'activity',
       })),
-      segmentation: SEGMENTATION,
+      segmentation: buildSegmentation(customers),
     })
   })
 )
@@ -192,6 +335,7 @@ router.post(
     const {
       name,
       description = '',
+      badge = '',
       category,
       brand = 'Generic',
       price,
@@ -213,6 +357,7 @@ router.post(
     const product = await Product.create({
       name,
       description,
+      badge,
       category,
       brand,
       price: Number(price),
@@ -244,6 +389,8 @@ router.post(
       stock: product.stock,
       rating: product.rating,
       reviews: product.reviews,
+      description: product.description,
+      badge: product.badge,
       status: product.stock === 0 ? 'Out of Stock' : product.stock < 15 ? 'Low Stock' : 'Active',
       image: product.image,
       giftTags: product.giftTags,
@@ -331,14 +478,41 @@ router.get(
 router.patch(
   '/refunds/:id/status',
   asyncHandler(async (req, res) => {
-    const { status } = req.body
+    const { status, resolution, adminNote } = req.body
     if (!status) return res.status(400).json({ message: 'status is required' })
+
+    const allowed = ['Pending', 'Approved', 'Pickup Scheduled', 'Refunded', 'Rejected', 'Cancelled']
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ message: `status must be one of: ${allowed.join(', ')}` })
+    }
+
+    const existing = await RefundRequest.findById(req.params.id)
+    if (!existing) return res.status(404).json({ message: 'Refund request not found' })
+
+    const wasResolved = ['Refunded', 'Rejected', 'Cancelled'].includes(existing.status)
+    const isResolved = ['Refunded', 'Rejected', 'Cancelled'].includes(status)
+
     const refund = await RefundRequest.findByIdAndUpdate(
       req.params.id,
-      { status },
+      {
+        status,
+        resolution: resolution ?? existing.resolution ?? null,
+        adminNote: adminNote ?? existing.adminNote ?? undefined,
+        resolvedAt: isResolved ? new Date() : null,
+      },
       { new: true }
     ).lean()
-    if (!refund) return res.status(404).json({ message: 'Refund request not found' })
+
+    // Returned stock comes back exactly once, when staff close the request
+    // as Refunded. Stock was never held back when the request was created.
+    if (status === 'Refunded' && !wasResolved && Array.isArray(existing.items)) {
+      for (const item of existing.items) {
+        if (item.productId) {
+          await Product.updateOne({ _id: item.productId }, { $inc: { stock: item.quantity } })
+        }
+      }
+    }
+
     res.json(refund)
   })
 )
@@ -419,6 +593,34 @@ router.get(
   })
 )
 
+router.post(
+  '/team-users',
+  asyncHandler(async (req, res) => {
+    const { name, email, role = 'Viewer', status = 'Active' } = req.body
+    if (!name?.trim() || !email?.trim()) {
+      return res.status(400).json({ message: 'Name and email are required' })
+    }
+
+    const count = await TeamUser.countDocuments()
+    const user = await TeamUser.create({
+      userId: `U${String(count + 1).padStart(3, '0')}`,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      role,
+      status,
+      lastLogin: 'Never',
+    })
+
+    await ActivityLog.create({
+      user: 'Admin',
+      action: `Created team user ${user.name}`,
+      timestamp: new Date().toLocaleString('en-IN'),
+    })
+
+    res.status(201).json(user.toObject())
+  })
+)
+
 router.patch(
   '/team-users/:userId/status',
   asyncHandler(async (req, res) => {
@@ -431,6 +633,45 @@ router.patch(
     ).lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
     res.json(user)
+  })
+)
+
+router.patch(
+  '/team-users/:userId',
+  asyncHandler(async (req, res) => {
+    const { name, email, role, status, lastLogin } = req.body
+    if (!name?.trim() || !email?.trim() || !role?.trim()) {
+      return res.status(400).json({ message: 'Name, email and role are required' })
+    }
+    const user = await TeamUser.findOneAndUpdate(
+      { userId: req.params.userId },
+      {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role: role.trim(),
+        ...(status ? { status } : {}),
+        ...(lastLogin ? { lastLogin } : {}),
+      },
+      { new: true, runValidators: true }
+    ).lean()
+    if (!user) return res.status(404).json({ message: 'User not found' })
+    res.json(user)
+  })
+)
+
+router.delete(
+  '/team-users/:userId',
+  asyncHandler(async (req, res) => {
+    const user = await TeamUser.findOneAndDelete({ userId: req.params.userId }).lean()
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    await ActivityLog.create({
+      user: 'Admin',
+      action: `Deleted team user ${user.name}`,
+      timestamp: new Date().toLocaleString('en-IN'),
+    })
+
+    res.json({ message: 'User deleted', userId: req.params.userId })
   })
 )
 
@@ -460,14 +701,21 @@ router.get(
 router.get(
   '/analytics/segmentation',
   asyncHandler(async (req, res) => {
-    res.json(SEGMENTATION)
+    const customers = await AdminCustomer.find().lean()
+    res.json(buildSegmentation(customers))
   })
 )
 
 router.get(
   '/analytics/recommendations',
   asyncHandler(async (req, res) => {
-    res.json(AI_RECOMMENDATIONS)
+    const [customers, products, campaigns] = await Promise.all([
+      AdminCustomer.find().lean(),
+      Product.find().sort({ reviews: -1, rating: -1 }).limit(20).lean(),
+      AdminCampaign.find().sort({ createdAt: -1 }).limit(20).lean(),
+    ])
+    const { segments } = buildSegmentation(customers)
+    res.json(buildRecommendations(segments, products, campaigns))
   })
 )
 

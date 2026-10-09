@@ -1,0 +1,53 @@
+.offers-page .dm-card {
+  max-width: 900px;
+  margin-bottom: 24px;
+}
+
+.offers-page .dm-card-head h3 {
+  color: #172554;
+}
+
+.offers-coupon-section {
+  max-width: 900px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.offers-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.offers-section-heading h2 {
+  margin: 0;
+  color: #172554;
+  font-size: 20px;
+}
+
+.offers-section-heading p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.offers-section-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #2563eb;
+  background: #dbeafe;
+  border-radius: 12px;
+}
+
+.offers-coupon-section .coupon-box {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}

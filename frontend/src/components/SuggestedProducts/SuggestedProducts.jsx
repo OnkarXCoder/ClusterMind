@@ -1,12 +1,29 @@
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import ProductCard from "../ProductCard/ProductCard";
 import { getProducts } from "../../services/products";
 import "./SuggestedProducts.css";
 
 export default function SuggestedProducts({ excludeIds }) {
-  const suggested = getProducts()
-    .filter((p) => !excludeIds.includes(p.id))
-    .slice(0, 4);
+  const [suggested, setSuggested] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    const excluded = excludeIds || [];
+
+    getProducts().then((products) => {
+      if (!active) return;
+      setSuggested(
+        products
+          .filter((p) => !excluded.includes(p.id))
+          .slice(0, 4)
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [excludeIds]);
 
   return (
     <div className="suggested-section">

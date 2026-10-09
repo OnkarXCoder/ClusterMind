@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Minus, Plus, Heart, Trash2 } from "lucide-react";
 import "./CartItem.css";
 
-const fmt = (n) => n.toLocaleString("en-IN");
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
 
 export default function CartItem({ item, onUpdateQty, onRemove, onSaveLater }) {
   const { product, quantity } = item;

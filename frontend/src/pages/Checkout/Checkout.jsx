@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Gift, ChevronRight } from "lucide-react";
 import Sidebar from "../../components/Sidebar/Sidebar";
@@ -17,6 +17,9 @@ import {
 } from "../../services/cart";
 import { clearCart } from "../../services/cart";
 import { getProductById } from "../../services/products";
+import { getCurrentUser } from "../../services/auth";
+import { openRazorpayCheckout } from "../../services/razorpay";
+import { getPaymentConfig, createOrder, createPaymentOrder } from "../../api";
 import {
   getSavedAddress,
   saveAddress,
@@ -29,25 +32,45 @@ import "./Checkout.css";
 export default function Checkout() {
   const navigate = useNavigate();
   const [cart, setCart] = useState(getCartItems());
+  const [items, setItems] = useState([]);
   const [, force] = useState(0);
   const [address, setAddress] = useState(getSavedAddress());
   const [shipping, setShipping] = useState("standard");
   const [payment, setPayment] = useState("upi");
   const [gift, setGift] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const [payError, setPayError] = useState("");
+  const [gateway, setGateway] = useState(null);
 
   useEffect(() => subscribeCart(() => {
     setCart(getCartItems());
     force((n) => n + 1);
   }), []);
 
-  const items = useMemo(
-    () =>
-      cart
-        .map((i) => ({ ...i, product: getProductById(i.productId) }))
-        .filter((i) => i.product),
-    [cart]
-  );
+  // Ask the server whether Razorpay is usable, so a missing secret key
+  // degrades to "pay on delivery" instead of failing at the last step
+  useEffect(() => {
+    let cancelled = false;
+    getPaymentConfig()
+      .then((cfg) => { if (!cancelled) setGateway(cfg); })
+      .catch(() => { if (!cancelled) setGateway({ configured: false, keyId: null }); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      cart.map(async (item) => ({
+        ...item,
+        product: await getProductById(item.productId),
+      }))
+    ).then((resolved) => {
+      if (!cancelled) setItems(resolved.filter((item) => item.product));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cart]);
 
   const coupon = getAppliedCoupon();
   const discount = coupon?.discount || 0;
@@ -62,19 +85,81 @@ export default function Checkout() {
     saveAddress(addr);
   };
 
+  // Cash on delivery keeps the existing local-only behaviour
   const handlePlaceOrder = () => {
+    if (payment === "cod" || !gateway?.configured) {
+      setPayError("");
+      setPlacing(true);
+      setTimeout(() => {
+        const order = placeOrder({
+          items,
+          address,
+          shipping: shippingMethod,
+          payment: PAYMENT_METHODS.find((p) => p.id === payment),
+          totals: { subtotal, discount, delivery, gst, total },
+        });
+        clearCart();
+        navigate(`/order-success/${order.id}`);
+      }, 1200);
+      return;
+    }
+    payWithRazorpay();
+  };
+
+  const payWithRazorpay = async () => {
+    setPayError("");
     setPlacing(true);
-    setTimeout(() => {
-      const order = placeOrder({
-        items,
+    let dbOrder = null;
+
+    try {
+      // 1. Persist the order server-side first — the gateway amount and the
+      //    final payment record both hang off this document.
+      const created = await createOrder({
+        items: items.map((i) => ({
+          productId: i.product.id,
+          name: i.product.name,
+          image: i.product.image,
+          quantity: i.quantity,
+          price: i.product.price,
+        })),
         address,
-        shipping: shippingMethod,
-        payment: PAYMENT_METHODS.find((p) => p.id === payment),
-        totals: { subtotal, discount, delivery, gst, total },
+        shipping: { label: shippingMethod.label, eta: shippingMethod.eta, price: delivery },
+        payment: { label: PAYMENT_METHODS.find((p) => p.id === payment)?.label || "Razorpay" },
+        totals: { subtotal, shipping: delivery, discount: discount + gst, total },
       });
+      dbOrder = created.order;
+
+      // 2. Ask the backend for a Razorpay order (amount comes from the DB)
+      const gatewayOrder = await createPaymentOrder(dbOrder._id);
+
+      // 3. Open the modal
+      await openRazorpayCheckout({
+        order: {
+          gatewayOrderId: gatewayOrder.gatewayOrderId,
+          amount: gatewayOrder.amount,
+          currency: gatewayOrder.currency,
+          orderId: dbOrder._id,
+        },
+        config: { keyId: gatewayOrder.keyId || gateway?.keyId },
+        user: getCurrentUser(),
+      });
+
+      // 4. Only now navigate — we know the payment cleared
       clearCart();
-      navigate(`/order-success/${order.id}`);
-    }, 1200);
+      navigate(`/order-success/${dbOrder._id}?paid=1`);
+    } catch (err) {
+      if (err?.code === "PAYMENT_DISMISSED" || err?.message === "PAYMENT_DISMISSED") {
+        setPayError("Payment cancelled. Your items are still in the cart.");
+      } else if (err?.code === "PAYMENT_FAILED") {
+        setPayError(err.message);
+      } else if (!gateway?.configured) {
+        setPayError("Online payments aren't available right now.");
+      } else {
+        setPayError(err?.message || "Something went wrong starting the payment.");
+      }
+    } finally {
+      setPlacing(false);
+    }
   };
 
   if (items.length === 0) {
@@ -163,6 +248,17 @@ export default function Checkout() {
                 placing={placing}
                 onPlaceOrder={handlePlaceOrder}
               />
+
+              {payError && (
+                <p className="checkout-pay-error" role="alert">{payError}</p>
+              )}
+
+              {!gateway?.configured && gateway !== null && payment !== "cod" && (
+                <p className="checkout-pay-note">
+                  Online payment isn&apos;t configured yet, so this order will be placed as
+                  Cash on Delivery.
+                </p>
+              )}
             </div>
           </div>
 

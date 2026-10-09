@@ -37,7 +37,7 @@ export default function Navbar({ onToggleSidebar }) {
   );
 
   const user = getCurrentUser();
-  const firstName = user?.fullName?.split(" ")[0] || "Rahul";
+  const firstName = user?.fullName?.split(" ")[0] || user?.name?.split(" ")[0] || "Account";
   const profileImage = user?.profileImage;
 
   const doSearch = () => {
@@ -77,10 +77,10 @@ export default function Navbar({ onToggleSidebar }) {
 
       <div className="nav-right">
 
-        <div className="icon">
+        <Link to="/notifications" className="icon" aria-label="Notifications">
           <Bell size={20} />
           <span className="badge">3</span>
-        </div>
+        </Link>
 
         <Link to="/wishlist" className="icon">
           <Heart size={20} />
@@ -92,11 +92,11 @@ export default function Navbar({ onToggleSidebar }) {
           {cartCount > 0 && <span className="badge">{cartCount}</span>}
         </Link>
 
-        <div className="profile">
+        <Link to="/profile" className="profile" aria-label="Open profile">
           <img src={profileImage || defaultProfile} alt="profile" />
           <span>{firstName}</span>
           <ChevronDown size={18} />
-        </div>
+        </Link>
 
       </div>
 

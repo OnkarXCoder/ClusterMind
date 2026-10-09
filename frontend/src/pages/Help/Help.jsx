@@ -7,7 +7,7 @@ import {
   Mail,
   MessageSquare,
   Truck,
-  RefreshCcw,
+  RefreshCw,
   CreditCard,
   ShieldCheck,
   Package,
@@ -23,7 +23,7 @@ const faqs = [
     a: "Go to Orders from the sidebar. Every order shows its current status — Delivered, Shipped, Pending or Cancelled — along with the expected date.",
   },
   {
-    icon: <RefreshCcw size={18} />,
+    icon: <RefreshCw size={18} />,
     q: "What is the return policy?",
     a: "You can return most items within 7 days of delivery for a full refund. The product must be unused and in its original packaging.",
   },

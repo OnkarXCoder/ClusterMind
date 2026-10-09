@@ -1,12 +1,28 @@
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Plus, Tag } from 'lucide-react'
 import Button from '../../components/marketing/Button'
 import ChartCard from '../../components/marketing/ChartCard'
 import DataTable from '../../components/marketing/DataTable'
 import StatusBadge from '../../components/marketing/StatusBadge'
 import Modal from '../../components/marketing/Modal'
+import LoadingState from '../../components/marketing/LoadingState'
+import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
-import { OFFERS, COUPONS } from '../../data/marketingMockData'
+import { getMarketingCoupons, createMarketingCoupon } from '../../api'
+
+const formatDate = (value) =>
+  value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+
+const normalizeCoupon = (c) => ({
+  id: c._id || c.id,
+  name: c.code,
+  type: 'Coupon',
+  discount: typeof c.discount === 'number' ? `${c.discount}%` : c.discount,
+  segment: c.segment || 'All Customers',
+  validFrom: formatDate(c.validFrom),
+  validUntil: formatDate(c.validTill),
+  status: c.used ? 'Completed' : c.status || 'Active',
+})
 
 const COLUMNS = [
   { key: 'name', label: 'Name', render: (v) => <span className="font-semibold text-slate-900">{v}</span> },
@@ -25,48 +41,94 @@ const EMPTY = { name: '', discount: '', segment: 'All Customers', validFrom: '',
 
 export default function OffersCouponsPage() {
   const { show } = useToast()
-  const [offers, setOffers] = useState(OFFERS)
-  const [coupons, setCoupons] = useState(COUPONS)
+  const [coupons, setCoupons] = useState([])
+  const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(EMPTY)
+
+  const loadCoupons = useCallback(async () => {
+    try {
+      const res = await getMarketingCoupons()
+      setCoupons((res?.items ?? []).map(normalizeCoupon))
+    } catch {
+      setCoupons([])
+      show('Unable to load coupons.', 'error')
+    }
+  }, [show])
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    loadCoupons().finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [loadCoupons])
 
   const openCreate = (kind) => {
     setForm(EMPTY)
     setModal(kind)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const record = {
-      ...form,
-      type: modal === 'offer' ? 'Offer' : 'Coupon',
-      status: 'Active',
+    if (modal === 'offer') {
+      show('Offers are not yet supported by the backend.', 'info')
+      setModal(null)
+      return
     }
-    if (modal === 'offer') setOffers((o) => [record, ...o])
-    else setCoupons((c) => [record, ...c])
-    show(`${modal === 'offer' ? 'Offer' : 'Coupon'} "${record.name}" created (frontend demo).`, 'success')
+    const discountNumber = Number(String(form.discount).replace(/[^0-9.]/g, '')) || 0
+    try {
+      await createMarketingCoupon({
+        code: form.name,
+        discount: discountNumber,
+        segment: form.segment,
+        validFrom: form.validFrom || undefined,
+        validTill: form.validUntil || undefined,
+        status: 'Active',
+      })
+      await loadCoupons()
+      show(`Coupon "${form.name}" created.`, 'success')
+    } catch {
+      show('Unable to create coupon.', 'error')
+    }
     setModal(null)
   }
 
+  if (loading) {
+    return (
+      <div className="dm-page">
+        <LoadingState label="Loading coupons..." />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Offers & Coupons</h2>
-          <p className="text-sm text-slate-500">Discounts and promotion codes by segment</p>
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon orange">
+          <Tag className="h-6 w-6" />
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" icon={Plus} onClick={() => openCreate('offer')}>
-            Create Offer
-          </Button>
-          <Button icon={Plus} onClick={() => openCreate('coupon')}>
-            Create Coupon
-          </Button>
-        </div>
+        <h2 className="dm-hero-title">Offers & Coupons</h2>
+        <p className="dm-hero-sub">Discounts and promotion codes by segment</p>
       </div>
 
-      <ChartCard title="Offers" subtitle={`${offers.length} active offers`}>
-        <DataTable columns={COLUMNS} rows={offers} />
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <Button variant="secondary" icon={Plus} onClick={() => openCreate('offer')}>
+          Create Offer
+        </Button>
+        <Button icon={Plus} onClick={() => openCreate('coupon')}>
+          Create Coupon
+        </Button>
+      </div>
+
+      <ChartCard title="Offers" subtitle="Discount rules applied across the store">
+        <EmptyState
+          title="No offers available"
+          description="Offers are not yet supported by the backend."
+        />
       </ChartCard>
 
       <ChartCard title="Coupons" subtitle={`${coupons.length} active coupons`}>

@@ -25,12 +25,12 @@ const highlights = [
 
 export default function StorefrontHighlights() {
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-      <div className="grid gap-3 rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm shadow-slate-200/70 backdrop-blur sm:grid-cols-2 lg:grid-cols-4">
+    <section className="mx-auto w-full max-w-[1480px] px-3 pt-6">
+      <div className="grid w-full justify-items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm shadow-slate-200/70 backdrop-blur sm:grid-cols-2 lg:grid-cols-4">
         {highlights.map((item) => (
-          <div key={item.title} className="flex items-start gap-3 rounded-xl px-3 py-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
-              <item.icon className="h-5 w-5" />
+          <div key={item.title} className="flex w-full max-w-[280px] items-center justify-center gap-3 rounded-xl px-3 py-3 text-center">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700" aria-hidden="true">
+              <item.icon className="h-5 w-5" aria-hidden="true" focusable="false" />
             </span>
             <div>
               <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>

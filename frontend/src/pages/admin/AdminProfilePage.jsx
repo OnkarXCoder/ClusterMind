@@ -52,7 +52,15 @@ export default function AdminProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon orange"><User size={24} /></div>
+        <div>
+          <h2 className="dm-hero-title">My Profile</h2>
+          <p className="dm-hero-sub">{role} account settings</p>
+        </div>
+      </div>
+
       <ChartCard title="My Profile" subtitle="Manage your admin account details">
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-600 to-orange-600 text-2xl font-black text-white shadow-lg">
@@ -75,7 +83,7 @@ export default function AdminProfilePage() {
         </div>
       </ChartCard>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="dm-grid-2">
         <ChartCard title="Personal Information" subtitle="Update your account details">
           <div className="space-y-4">
             <div>

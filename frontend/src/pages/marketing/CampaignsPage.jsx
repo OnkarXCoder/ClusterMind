@@ -1,11 +1,23 @@
-import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Megaphone } from 'lucide-react'
 import Button from '../../components/marketing/Button'
 import SearchBar from '../../components/marketing/SearchBar'
 import CampaignTable from '../../components/marketing/CampaignTable'
 import Modal from '../../components/marketing/Modal'
+import LoadingState from '../../components/marketing/LoadingState'
 import { useToast } from '../../components/marketing/Toast'
-import { CAMPAIGNS } from '../../data/marketingMockData'
+import { getMarketingCampaigns, createMarketingCampaign, deleteMarketingCampaign } from '../../api'
+
+const normalizeCampaign = (c) => ({
+  id: c._id || c.id,
+  name: c.name,
+  segment: c.segment || 'All Segments',
+  channel: c.channel || '—',
+  startDate: c.startDate || '—',
+  endDate: c.endDate || '—',
+  status: c.status || 'Draft',
+  performance: c.performance ?? 0,
+})
 
 const STATUSES = ['All', 'Draft', 'Scheduled', 'Active', 'Completed', 'Paused']
 const SEGMENTS = [
@@ -34,12 +46,34 @@ const inputClass =
 
 export default function CampaignsPage() {
   const { show } = useToast()
-  const [campaigns, setCampaigns] = useState(CAMPAIGNS)
+  const [campaigns, setCampaigns] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('All')
   const [segment, setSegment] = useState('All Segments')
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
+
+  const loadCampaigns = useCallback(async () => {
+    try {
+      const res = await getMarketingCampaigns()
+      setCampaigns((res?.items ?? []).map(normalizeCampaign))
+    } catch {
+      setCampaigns([])
+      show('Unable to load campaigns.', 'error')
+    }
+  }, [show])
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    loadCampaigns().finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [loadCampaigns])
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -50,11 +84,11 @@ export default function CampaignsPage() {
     })
   }, [campaigns, search, status, segment])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const newCampaign = {
-      id: Date.now(),
+    const payload = {
       name: form.name,
+      description: form.description,
       segment: form.segment,
       channel: form.channel,
       startDate: form.startDate,
@@ -62,39 +96,53 @@ export default function CampaignsPage() {
       status: 'Draft',
       performance: 0,
     }
-    setCampaigns((c) => [newCampaign, ...c])
+    try {
+      await createMarketingCampaign(payload)
+      await loadCampaigns()
+      show(`Campaign "${form.name}" created as Draft.`, 'success')
+    } catch {
+      show('Unable to create campaign.', 'error')
+    }
     setModalOpen(false)
     setForm(EMPTY_FORM)
-    show(`Campaign "${newCampaign.name}" created as Draft (frontend demo).`, 'success')
   }
 
-  const handleDelete = (c) => {
-    setCampaigns((list) => list.filter((x) => x.id !== c.id))
-    show(`Campaign "${c.name}" deleted (frontend demo).`, 'info')
+  const handleDelete = async (c) => {
+    try {
+      await deleteMarketingCampaign(c.id)
+      setCampaigns((list) => list.filter((x) => x.id !== c.id))
+      show(`Campaign "${c.name}" deleted.`, 'success')
+    } catch {
+      show('Unable to delete campaign.', 'error')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="dm-page">
+        <LoadingState label="Loading campaigns..." />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Campaign Management</h2>
-          <p className="text-sm text-slate-500">{filtered.length} campaigns match your filters</p>
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon purple">
+          <Megaphone className="h-6 w-6" />
         </div>
-        <Button icon={Plus} onClick={() => setModalOpen(true)}>
-          Create Campaign
-        </Button>
+        <h2 className="dm-hero-title">Campaign Management</h2>
+        <p className="dm-hero-sub">{filtered.length} campaigns match your filters</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <SearchBar value={search} onChange={setSearch} placeholder="Search campaigns..." className="w-full sm:w-64" />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="dm-tabs">
           {STATUSES.map((s) => (
             <button
               key={s}
               onClick={() => setStatus(s)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                status === s ? 'bg-violet-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-violet-300'
-              }`}
+              className={`dm-tab ${status === s ? 'active' : ''}`}
             >
               {s}
             </button>

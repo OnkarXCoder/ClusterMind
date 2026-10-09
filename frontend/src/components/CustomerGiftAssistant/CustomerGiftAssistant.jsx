@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Gift, HeartHandshake, Lightbulb, Search, ShoppingCart } from "lucide-react";
 import { addToCart } from "../../services/cart";
 import { getProducts } from "../../services/products";
-import { giftRecipients, matchesGiftRecipient } from "../giftRules";
+import {
+  giftRecipients,
+  matchesGiftRecipient,
+  resolveRecipientKey,
+  scoreGiftMatch,
+} from "../giftRules";
 import "./CustomerGiftAssistant.css";
 
 const REQUEST_KEY = "clustermind_customer_product_requests";
@@ -15,7 +20,17 @@ const budgets = [
   { label: "Above Rs. 20,000", value: "above20000" },
 ];
 
-const interests = ["Any", "Electronics", "Fashion", "Beauty", "Sports", "Books", "Home & Kitchen", "Toys & Games"];
+const interests = [
+  "Any",
+  "Electronics",
+  "Fashion",
+  "Beauty",
+  "Sports",
+  "Books",
+  "Home & Kitchen",
+  "Toys & Games",
+  "Grocery",
+];
 
 const saveRequest = (request) => {
   const existing = JSON.parse(localStorage.getItem(REQUEST_KEY) || "[]");
@@ -31,19 +46,29 @@ export default function CustomerGiftAssistant() {
   const [requestName, setRequestName] = useState("");
   const [saved, setSaved] = useState(false);
   const [added, setAdded] = useState({});
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    getProducts({ price: budget }).then((list) => {
+      if (active) setProducts(Array.isArray(list) ? list : []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [budget]);
 
   const suggestions = useMemo(() => {
-    let list = getProducts({ price: budget });
-    if (interest !== "Any") {
-      list = list.filter((product) => product.category === interest);
-    }
+    const activeKey = resolveRecipientKey(recipient);
+    const list =
+      interest === "Any" ? products : products.filter((product) => product.category === interest);
     return list
-      .filter((product) => matchesGiftRecipient(product, recipient))
-      .sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+      .filter((product) => matchesGiftRecipient(product, activeKey))
+      .sort((a, b) => scoreGiftMatch(b, activeKey) - scoreGiftMatch(a, activeKey))
       .slice(0, 6);
-  }, [budget, interest, recipient]);
+  }, [products, interest, recipient]);
 
-  const selectedRecipient = giftRecipients.find((item) => item.key === recipient);
+  const selectedRecipient = giftRecipients.find((item) => item.key === resolveRecipientKey(recipient));
 
   const handleAdd = (product) => {
     addToCart(product);

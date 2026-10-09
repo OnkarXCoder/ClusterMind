@@ -1,77 +1,78 @@
 import "./RecentOrders.css";
+import { useState, useEffect } from "react";
+import { isAuthenticated } from "../../services/auth";
 
-const orders = [
-  {
-    id: "#ORD1201",
-    product: "Apple iPhone 15",
-    amount: "₹69,999",
-    status: "Delivered",
-    date: "02 Aug 2026",
-  },
-  {
-    id: "#ORD1202",
-    product: "Sony WH-1000XM5",
-    amount: "₹29,999",
-    status: "Shipped",
-    date: "04 Aug 2026",
-  },
-  {
-    id: "#ORD1203",
-    product: "Nike Air Max 270",
-    amount: "₹5,999",
-    status: "Pending",
-    date: "06 Aug 2026",
-  },
-  {
-    id: "#ORD1204",
-    product: "boAt Wave Sigma 3",
-    amount: "₹1,299",
-    status: "Cancelled",
-    date: "28 Jul 2026",
-  },
-];
+const statusClass = { Delivered: "active", Shipped: "info", Processing: "info", Pending: "pending", Cancelled: "blocked" };
 
-export default function RecentOrders() {
+function RecentOrders() {
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+    const token = localStorage.getItem("clustermind_token");
+    const h = { "Content-Type": "application/json" };
+    if (token) h.Authorization = `Bearer ${token}`;
+
+    fetch("/api/orders", { headers: h })
+      .then(r => r.json())
+      .then(data => {
+        const list = data?.orders || data || [];
+        setOrders(Array.isArray(list) ? list.slice(0, 5) : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (orders.length === 0) {
+    return (
+      <div className="dm-card">
+        <div className="dm-card-head">
+          <h3>Recent Orders</h3>
+          <p className="dm-hero-sub">Your latest purchases</p>
+        </div>
+        <div className="dm-card-body" style={{ textAlign: 'center', padding: 40, color: '#94A3B8' }}>
+          <p>No orders yet. Start shopping to see your orders here!</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="orders-card">
-
-      <div className="orders-head">
-        <h2>Recent Orders</h2>
-        <button>View All Orders</button>
+    <div className="dm-card">
+      <div className="dm-card-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3>Recent Orders</h3>
+          <p className="dm-hero-sub">Your latest purchases</p>
+        </div>
+        <button className="dm-btn dm-btn-outline dm-btn-sm">View All</button>
       </div>
-
-      <div className="orders-table-wrap">
-        <table>
-
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Product</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {orders.map((item, index) => (
-              <tr key={index}>
-                <td className="order-id">{item.id}</td>
-                <td>{item.product}</td>
-                <td className="amount">{item.amount}</td>
-                <td>
-                  <span className={`badge ${item.status.toLowerCase()}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td>{item.date}</td>
+      <div className="dm-card-body" style={{ padding: 0 }}>
+        <div className="dm-table-wrap" style={{ borderRadius: 0, border: 'none' }}>
+          <table className="dm-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Product</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
               </tr>
-            ))}
-          </tbody>
-
-        </table>
+            </thead>
+            <tbody>
+              {orders.map((item, index) => (
+                <tr key={item._id || index}>
+                  <td style={{ fontWeight: 700, color: '#2563EB' }}>#{item.orderId || item._id?.slice(-6) || `ORD${index + 1}`}</td>
+                  <td>{item.productName || item.items?.[0]?.name || 'Product'}</td>
+                  <td style={{ fontWeight: 700 }}>₹{(item.total || item.totalAmount || 0).toLocaleString('en-IN')}</td>
+                  <td><span className={`dm-badge ${statusClass[item.status] || 'info'}`}>{item.status || 'Processing'}</span></td>
+                  <td>{item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-
     </div>
   );
 }
+
+export default RecentOrders;

@@ -3,17 +3,35 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Menu, Bell, ChevronDown, LogOut, User } from 'lucide-react'
 import SearchBar from './SearchBar'
 import DateRangePicker from './DateRangePicker'
+import { currentMonthRange } from '../../utils/dateRange'
 import { NAV_ITEMS } from './MarketingSidebar'
-import { NOTIFICATIONS, CURRENT_DATE_RANGE } from '../../data/marketingMockData'
+import { getMarketingCampaigns } from '../../api'
 import { getCurrentUser, logout } from '../../services/auth'
 
 export default function MarketingHeader({ onMenu }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [range, setRange] = useState(CURRENT_DATE_RANGE)
+  const [range, setRange] = useState(currentMonthRange())
+  const [notifications, setNotifications] = useState([])
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+
+  useEffect(() => {
+    getMarketingCampaigns()
+      .then((res) => {
+        if (res?.items?.length) {
+          setNotifications(
+            res.items.slice(0, 5).map((c) => ({
+              title: `Campaign "${c.name}" is ${c.status}`,
+              time: c.startDate || '',
+              unread: String(c.status).toLowerCase() === 'active',
+            })),
+          )
+        }
+      })
+      .catch(() => {})
+  }, [])
   const notifRef = useRef(null)
   const profileRef = useRef(null)
 
@@ -21,6 +39,22 @@ export default function MarketingHeader({ onMenu }) {
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
   )
   const title = current?.label || 'Marketing & AI/ML Dashboard'
+  const moduleMatches = search.trim()
+    ? NAV_ITEMS.filter((item) =>
+        item.label.toLowerCase().includes(search.trim().toLowerCase()),
+      ).slice(0, 5)
+    : []
+
+  const openModule = (to) => {
+    setSearch('')
+    navigate(to)
+  }
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Enter' && moduleMatches[0]) {
+      openModule(moduleMatches[0].to)
+    }
+  }
 
   useEffect(() => {
     const handler = (e) => {
@@ -61,12 +95,28 @@ export default function MarketingHeader({ onMenu }) {
       </div>
 
       <div className="internal-header-actions ml-auto flex items-center gap-2.5 sm:gap-3">
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search..."
-          className="internal-header-search hidden w-44 md:block lg:w-64"
-        />
+        <div className="internal-module-search">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search modules..."
+            className="internal-header-search w-full lg:w-64"
+          />
+          {moduleMatches.length > 0 && (
+            <div className="internal-search-menu">
+              {moduleMatches.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button key={item.to} type="button" onClick={() => openModule(item.to)}>
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         <DateRangePicker value={range} onChange={setRange} />
 
@@ -81,7 +131,7 @@ export default function MarketingHeader({ onMenu }) {
           >
             <Bell className="h-[18px] w-[18px]" />
             <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-              {NOTIFICATIONS.filter((n) => n.unread).length}
+              {notifications.filter((n) => n.unread).length}
             </span>
           </button>
 
@@ -91,7 +141,10 @@ export default function MarketingHeader({ onMenu }) {
                 <p className="text-sm font-bold text-slate-900">Notifications</p>
               </div>
               <ul className="max-h-72 overflow-y-auto">
-                {NOTIFICATIONS.map((n, i) => (
+                {notifications.length === 0 && (
+                  <li className="px-3 py-6 text-center text-sm text-slate-400">No notifications</li>
+                )}
+                {notifications.map((n, i) => (
                   <li key={i} className="flex items-start gap-2.5 px-3 py-3 transition hover:bg-slate-50">
                     {n.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-violet-500" />}
                     <div className={n.unread ? '' : 'pl-3.5'}>
@@ -122,7 +175,13 @@ export default function MarketingHeader({ onMenu }) {
 
           {profileOpen && (
             <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-              <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+              <button
+                onClick={() => {
+                  setProfileOpen(false)
+                  navigate('/marketing/settings')
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+              >
                 <User className="h-4 w-4 text-slate-400" />
                 My Profile
               </button>

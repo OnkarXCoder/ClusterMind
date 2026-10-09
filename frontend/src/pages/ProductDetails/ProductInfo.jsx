@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import "./ProductDetails.css";
 
-const fmt = (n) => n.toLocaleString("en-IN");
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
 
 export default function ProductInfo({ product }) {
   const [color, setColor] = useState("Black");
@@ -22,7 +22,9 @@ export default function ProductInfo({ product }) {
 
   const colors = ["Black", "Blue", "White"];
   const storages = ["128GB", "256GB", "512GB"];
-  const saved = product.oldPrice - product.price;
+  const price = Number(product.price || 0);
+  const oldPrice = Number(product.oldPrice || price);
+  const saved = Math.max(0, oldPrice - price);
 
   const handleAdd = () => {
     setAdded(true);
@@ -54,8 +56,8 @@ export default function ProductInfo({ product }) {
       </div>
 
       <div className="price-block">
-        <span className="price">₹{fmt(product.price)}</span>
-        <span className="old-price">₹{fmt(product.oldPrice)}</span>
+        <span className="price">₹{fmt(price)}</span>
+        {oldPrice > price && <span className="old-price">₹{fmt(oldPrice)}</span>}
         <span className="save">(Save ₹{fmt(saved)})</span>
       </div>
 

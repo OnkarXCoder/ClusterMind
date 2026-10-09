@@ -10532,7 +10532,7 @@ import {
   Mail as Mail2,
   MessageSquare as MessageSquare3,
   Truck as Truck8,
-  RefreshCcw,
+  RefreshCw,
   CreditCard as CreditCard3,
   ShieldCheck,
   Package as Package7
@@ -10797,7 +10797,7 @@ var faqs = [
     a: "Go to Orders from the sidebar. Every order shows its current status \u2014 Delivered, Shipped, Pending or Cancelled \u2014 along with the expected date."
   },
   {
-    icon: /* @__PURE__ */ jsx46(RefreshCcw, { size: 18 }),
+    icon: /* @__PURE__ */ jsx46(RefreshCw, { size: 18 }),
     q: "What is the return policy?",
     a: "You can return most items within 7 days of delivery for a full refund. The product must be unused and in its original packaging."
   },

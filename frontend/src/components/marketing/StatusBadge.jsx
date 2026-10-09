@@ -1,23 +1,30 @@
 const STYLES = {
-  Active: 'bg-emerald-100 text-emerald-700',
-  Completed: 'bg-sky-100 text-sky-700',
-  Scheduled: 'bg-violet-100 text-violet-700',
-  Draft: 'bg-slate-100 text-slate-600',
-  Paused: 'bg-amber-100 text-amber-700',
-  Expired: 'bg-red-100 text-red-600',
-  Available: 'bg-slate-100 text-slate-600',
-  'Ready for Analysis': 'bg-emerald-100 text-emerald-700',
-  Processing: 'bg-amber-100 text-amber-700',
+  Active: 'dm-badge active',
+  Completed: 'dm-badge info',
+  Scheduled: 'dm-badge pending',
+  Draft: 'dm-badge neutral',
+  Paused: 'dm-badge pending',
+  Expired: 'dm-badge blocked',
+  Available: 'dm-badge neutral',
+  'Ready for Analysis': 'dm-badge active',
+  Processing: 'dm-badge pending',
+  Delivered: 'dm-badge active',
+  Shipped: 'dm-badge info',
+  Pending: 'dm-badge pending',
+  Cancelled: 'dm-badge blocked',
+  Returned: 'dm-badge blocked',
+  Refunded: 'dm-badge neutral',
+  Approved: 'dm-badge active',
+  Rejected: 'dm-badge blocked',
+  Premium: 'dm-badge active',
+  Loyal: 'dm-badge info',
+  Inactive: 'dm-badge blocked',
+  Regular: 'dm-badge neutral',
 }
 
 export default function StatusBadge({ status }) {
   return (
-    <span
-      className={`status-badge inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
-        STYLES[status] || 'bg-slate-100 text-slate-600'
-      }`}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+    <span className={STYLES[status] || 'dm-badge neutral'}>
       {status}
     </span>
   )

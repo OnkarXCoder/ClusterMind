@@ -105,7 +105,7 @@ export default function AdminSidebar({ open, onClose, onLogout }) {
       >
         <div className="internal-brand">
           <div className="flex items-center gap-3">
-            <div className="internal-brand-mark" style={{ background: '#f97316' }}>
+            <div className="internal-brand-mark">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -171,7 +171,7 @@ export default function AdminSidebar({ open, onClose, onLogout }) {
 
         <div className="internal-sidebar-footer">
           <div className="internal-user-card">
-            <div className="internal-user-avatar" style={{ background: '#f97316' }}>
+            <div className="internal-user-avatar">
               {initials}
             </div>
             <div className="min-w-0">

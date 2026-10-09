@@ -28,7 +28,17 @@ const orderSchema = new mongoose.Schema(
       eta: String,
       price: { type: Number, default: 0 },
     },
-    payment: { label: String },
+    payment: {
+      label: String,
+      // Razorpay identifiers, populated once the gateway is involved
+      provider: { type: String, default: null },
+      gatewayOrderId: { type: String, default: null, index: true },
+      paymentId: { type: String, default: null },
+      signature: { type: String, default: null },
+      // 'Pending' | 'Paid' | 'Failed' | 'Refunded'
+      status: { type: String, default: 'Pending' },
+      paidAt: Date,
+    },
     totals: {
       subtotal: { type: Number, default: 0 },
       shipping: { type: Number, default: 0 },

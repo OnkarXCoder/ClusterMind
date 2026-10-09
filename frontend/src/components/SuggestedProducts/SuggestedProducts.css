@@ -25,19 +25,30 @@ font-size:14px;
 }
 
 .suggested-grid{
-display:grid;
-grid-template-columns:repeat(4,1fr);
+display:flex;
+flex-wrap:wrap;
+justify-content:center;
+align-items:stretch;
 gap:20px;
+padding:4px 0 10px;
+}
+
+.suggested-grid > *{
+flex:1 1 240px;
+max-width:340px;
+min-width:0;
 }
 
 @media(max-width:1200px){
-.suggested-grid{
-grid-template-columns:repeat(2,1fr);
+.suggested-grid > *{
+flex:1 1 260px;
+max-width:none;
 }
 }
 
 @media(max-width:600px){
-.suggested-grid{
-grid-template-columns:1fr;
+.suggested-grid > *{
+flex:1 1 100%;
+max-width:none;
 }
 }

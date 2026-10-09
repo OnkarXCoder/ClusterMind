@@ -10,15 +10,19 @@ box-sizing:border-box;
 
 body{
 background:
-radial-gradient(circle at 8% 0%, rgba(99,102,241,.10), transparent 28rem),
-var(--background);
+radial-gradient(circle at 8% -4%, rgba(79,70,229,.14), transparent 26rem),
+radial-gradient(circle at 92% 8%, rgba(6,182,212,.12), transparent 24rem),
+linear-gradient(180deg,#fbfdff 0%,var(--background) 42%,#eef4fb 100%);
 font-family:Inter,sans-serif;
 color:var(--text);
 -webkit-font-smoothing:antialiased;
+text-rendering:geometricPrecision;
 }
 
 h1,h2,h3,h4{
 font-family:Poppins,sans-serif;
+color:var(--heading);
+letter-spacing:0;
 }
 
 a{
@@ -29,6 +33,22 @@ color:inherit;
 button{
 cursor:pointer;
 font-family:inherit;
+}
+
+button,
+input,
+select,
+textarea{
+font:inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible{
+outline:none;
+box-shadow:var(--focus-ring);
 }
 
 ::selection{
@@ -46,6 +66,24 @@ background:var(--card);
 border:1px solid var(--border);
 border-radius:var(--radius-card);
 box-shadow:var(--shadow);
+}
+
+.glass-panel{
+background:rgba(255,255,255,.78);
+border:1px solid rgba(255,255,255,.72);
+box-shadow:var(--shadow);
+backdrop-filter:blur(18px);
+}
+
+@media (prefers-reduced-motion: reduce){
+*,
+*::before,
+*::after{
+animation-duration:.01ms!important;
+animation-iteration-count:1!important;
+scroll-behavior:auto!important;
+transition-duration:.01ms!important;
+}
 }
 
 ::-webkit-scrollbar{

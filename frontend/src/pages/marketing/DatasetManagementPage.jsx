@@ -65,7 +65,15 @@ export default function DatasetManagementPage() {
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="dm-page">
+      <div className="dm-hero">
+        <div className="dm-hero-icon blue">
+          <UploadCloud className="h-6 w-6" />
+        </div>
+        <h2 className="dm-hero-title">Dataset Management</h2>
+        <p className="dm-hero-sub">Upload and manage customer behaviour datasets</p>
+      </div>
+
       <div
         onDragOver={(e) => {
           e.preventDefault()
@@ -118,16 +126,16 @@ export default function DatasetManagementPage() {
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
                 <FileSpreadsheet className="h-6 w-6" />
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-bold text-slate-900">{dataset.name}</p>
+                  <p className="truncate text-sm font-bold text-slate-900">{dataset.name}</p>
                   <StatusBadge status={dataset.status} />
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
                   {dataset.records.toLocaleString()} records - {dataset.columns} columns - Uploaded {dataset.uploadDate}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <Button variant="secondary" size="sm" icon={Eye} onClick={() => setPreviewOpen(true)}>
                   View Dataset
                 </Button>

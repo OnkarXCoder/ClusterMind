@@ -1,15 +1,17 @@
 .product-card {
   position: relative;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.96);
+  border-radius: 22px;
   overflow: hidden;
-  transition: all 0.25s ease;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .product-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+  border-color: rgba(79, 70, 229, 0.24);
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.14);
 }
 
 /* AI Badge */
@@ -24,12 +26,12 @@
   align-items: center;
   gap: 5px;
 
-  background: #7c3aed;
+  background: linear-gradient(135deg, #4f46e5, #06b6d4);
   color: #ffffff;
 
   padding: 6px 9px;
 
-  border-radius: 20px;
+  border-radius: 999px;
 
   font-size: 10px;
   font-weight: 600;
@@ -62,11 +64,14 @@
 
   cursor: pointer;
 
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  transition: transform .2s ease, color .2s ease, box-shadow .2s ease;
 }
 
 .wishlist-button:hover {
   color: #ef4444;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(239, 68, 68, 0.16);
 }
 
 /* Image */
@@ -80,7 +85,9 @@
 
   padding: 20px;
 
-  background: #ffffff;
+  background:
+    radial-gradient(circle at 80% 12%, rgba(6, 182, 212, 0.10), transparent 9rem),
+    linear-gradient(180deg, #ffffff, #f8fafc);
 }
 
 .product-image-container a {
@@ -110,6 +117,8 @@
 .product-category {
   font-size: 12px;
   color: #6b7280;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .product-title-link {
@@ -125,9 +134,13 @@
 
   color: #111827;
 
-  white-space: nowrap;
+  display: -webkit-box;
+  min-height: 44px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .product-info h3:hover {
@@ -155,7 +168,7 @@
 
   padding: 4px 7px;
 
-  border-radius: 6px;
+  border-radius: 999px;
 
   font-size: 12px;
   font-weight: 600;
@@ -229,7 +242,7 @@
   justify-content: center;
   gap: 8px;
   background: linear-gradient(135deg, #eef2ff, #e0e7ff);
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 .product-image-fallback span {
@@ -250,7 +263,7 @@
 .product-buttons button {
   height: 42px;
 
-  border-radius: 12px;
+  border-radius: 999px;
 
   display: flex;
   align-items: center;
@@ -264,20 +277,21 @@
 
   cursor: pointer;
 
-  transition: 0.2s;
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
 
 .add-cart-button {
   border: 1px solid #4f46e5;
 
-  background: #4f46e5;
+  background: linear-gradient(135deg, #4f46e5, #06b6d4);
 
   color: white;
 }
 
 .add-cart-button:hover {
-  background: #4338ca;
-  border-color: #4338ca;
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.18);
 }
 
 .add-cart-button:disabled {
@@ -287,16 +301,17 @@
 }
 
 .buy-now-button {
-  border: 1px solid #2563eb;
+  border: 1px solid #f97316;
 
-  background: #2563eb;
+  background: linear-gradient(135deg, #facc15, #f97316);
 
-  color: white;
+  color: #111827;
 }
 
 .buy-now-button:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.18);
 }
 
 .buy-now-button:disabled {
@@ -310,9 +325,45 @@
 @media (max-width: 600px) {
   .product-image-container {
     height: 180px;
+    padding: 14px;
   }
 
   .product-info {
     padding: 14px;
+  }
+
+  .product-info h3 {
+    font-size: 14px;
+    min-height: 38px;
+  }
+
+  .product-price strong {
+    font-size: 17px;
+  }
+
+  .product-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .product-buttons button {
+    height: 38px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .product-image-container {
+    height: 150px;
+    padding: 12px;
+  }
+
+  .product-info h3 {
+    font-size: 13px;
+    min-height: 34px;
+  }
+
+  .rating-box {
+    font-size: 11px;
+    padding: 3px 6px;
   }
 }
