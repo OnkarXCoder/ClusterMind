@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Megaphone } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
+import { Megaphone, Plus } from 'lucide-react'
 import Button from '../../components/marketing/Button'
 import SearchBar from '../../components/marketing/SearchBar'
 import CampaignTable from '../../components/marketing/CampaignTable'
@@ -46,6 +47,7 @@ const inputClass =
 
 export default function CampaignsPage() {
   const { show } = useToast()
+  const location = useLocation()
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -53,6 +55,15 @@ export default function CampaignsPage() {
   const [segment, setSegment] = useState('All Segments')
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
+
+  useEffect(() => {
+    const targetSegment = location.state?.targetSegment
+    if (targetSegment) {
+      setForm((current) => ({ ...current, segment: targetSegment }))
+      setSegment(targetSegment)
+      setModalOpen(true)
+    }
+  }, [location.state])
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -157,6 +168,9 @@ export default function CampaignsPage() {
             <option key={s}>{s}</option>
           ))}
         </select>
+        <Button icon={Plus} onClick={() => setModalOpen(true)}>
+          Create Campaign
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

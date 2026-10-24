@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart, Star, Sparkles, Truck, Zap, PackageX } from "lucide-react";
 import { addToCart } from "../../services/cart";
 import { addToWishlist, removeFromWishlist } from "../../services/wishlist";
+import { resolveProductImage } from "../../utils/productImages";
+import { trackProductBehavior } from "../../services/behavior";
 import "./ProductCard.css";
 
 const formatNumber = (value) => Number(value || 0).toLocaleString("en-IN");
@@ -16,7 +18,7 @@ export default function ProductCard({ product }) {
     id: product?.id || product?._id || "",
     name: product?.name || "Unnamed Product",
     category: product?.category || "General",
-    image: product?.image || product?.thumbnail || "",
+    image: resolveProductImage(product),
     price: Number(product?.price || 0),
     oldPrice: Number(product?.oldPrice ?? product?.price ?? 0),
     discount: Number(product?.discount || 0),
@@ -30,6 +32,7 @@ export default function ProductCard({ product }) {
   const handleAdd = () => {
     if (!safeProduct.inStock) return;
     addToCart({ ...product, ...safeProduct });
+    trackProductBehavior("add_to_cart", { ...product, ...safeProduct }, { source: "product-card" });
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
@@ -37,6 +40,7 @@ export default function ProductCard({ product }) {
   const handleBuyNow = () => {
     if (!safeProduct.inStock) return;
     addToCart({ ...product, ...safeProduct }, 1);
+    trackProductBehavior("add_to_cart", { ...product, ...safeProduct }, { source: "product-card-buy-now" });
     navigate("/checkout");
   };
 
@@ -79,7 +83,11 @@ export default function ProductCard({ product }) {
             <span>{safeProduct.category}</span>
           </div>
         ) : (
-          <Link to={`/products/${safeProduct.id}`} aria-label={safeProduct.name}>
+          <Link
+            to={`/products/${safeProduct.id}`}
+            aria-label={safeProduct.name}
+            onClick={() => trackProductBehavior("click", { ...product, ...safeProduct }, { source: "product-card" })}
+          >
             <img
               src={safeProduct.image}
               alt={safeProduct.name}
@@ -94,7 +102,11 @@ export default function ProductCard({ product }) {
       <div className="product-info">
         <span className="product-category">{safeProduct.category}</span>
 
-        <Link to={`/products/${safeProduct.id}`} className="product-title-link">
+        <Link
+          to={`/products/${safeProduct.id}`}
+          className="product-title-link"
+          onClick={() => trackProductBehavior("click", { ...product, ...safeProduct }, { source: "product-card" })}
+        >
           <h3>{safeProduct.name}</h3>
         </Link>
 

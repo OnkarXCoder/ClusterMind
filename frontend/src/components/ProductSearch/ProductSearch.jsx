@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { trackSearch } from "../../services/behavior";
 import "./ProductSearch.css";
 
 export default function ProductSearch({ value, onChange, onClear }) {
@@ -7,6 +8,7 @@ export default function ProductSearch({ value, onChange, onClear }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    trackSearch(query, { source: "products-page" });
     onChange(query);
   };
 

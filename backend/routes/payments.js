@@ -9,6 +9,9 @@ const router = Router()
 
 const KEY_ID = process.env.RAZORPAY_KEY_ID || ''
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
+// Must be the secret configured in the Razorpay webhook settings, NOT the key
+// secret. Falling back to KEY_SECRET would make every signature check fail.
+const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || ''
 
 const isConfigured = () => Boolean(KEY_ID && KEY_SECRET)
 
@@ -27,6 +30,9 @@ router.post('/verify-webhook', async (req, res) => {
     if (!isConfigured()) {
       return res.status(503).json({ message: 'Payments are not configured on the server.' })
     }
+    if (!WEBHOOK_SECRET) {
+      return res.status(503).json({ message: 'Webhook secret is not configured on the server.' })
+    }
 
     // Prefer the captured raw bytes; fall back to re-serialising if absent
     const payload = req.rawBody || Buffer.from(JSON.stringify(req.body || {}))
@@ -34,7 +40,7 @@ router.post('/verify-webhook', async (req, res) => {
     if (!provided) return res.status(400).json({ message: 'Missing webhook signature.' })
 
     const expected = crypto
-      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET || KEY_SECRET)
+      .createHmac('sha256', WEBHOOK_SECRET)
       .update(payload)
       .digest('hex')
 
@@ -172,9 +178,21 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ message: 'Missing payment verification details.' })
     }
 
+    const order = await Order.findById(orderId)
+    if (!order) return res.status(404).json({ message: 'Order not found.' })
+    if (String(order.customerId) !== String(req.user.id)) {
+      return res.status(403).json({ message: 'Access denied.' })
+    }
+    // The signature must be over the gateway order id that WE stored, not a
+    // value supplied by the client, otherwise any order could be marked paid.
+    if (String(order.payment?.gatewayOrderId) !== String(gatewayOrderId)) {
+      return res.status(400).json({ message: 'Payment verification failed.' })
+    }
+
+    // Razorpay signs `<razorpay_order_id>|<razorpay_payment_id>`.
     const expected = crypto
       .createHmac('sha256', KEY_SECRET)
-      .update(`${orderId}|${paymentId}`)
+      .update(`${gatewayOrderId}|${paymentId}`)
       .digest('hex')
 
     // Constant-time compare so the signature can't be brute-forced
@@ -183,12 +201,6 @@ router.post('/verify', async (req, res) => {
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       await Order.updateOne({ _id: orderId }, { $set: { 'payment.status': 'Failed' } })
       return res.status(400).json({ message: 'Payment verification failed.' })
-    }
-
-    const order = await Order.findById(orderId)
-    if (!order) return res.status(404).json({ message: 'Order not found.' })
-    if (String(order.customerId) !== String(req.user.id)) {
-      return res.status(403).json({ message: 'Access denied.' })
     }
 
     // Idempotent: a retry after a flaky network shouldn't error out

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { Sparkles, ShoppingCart, Star } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { resolveProductImage } from '../utils/productImages'
+import { trackProductBehavior } from '../services/behavior'
 
 const formatPrice = (value) =>
   new Intl.NumberFormat('en-IN', {
@@ -18,7 +20,7 @@ export default function ProductCard({ product }) {
     id: product?.id || product?._id || '',
     name: product?.name || 'Unnamed Product',
     brand: product?.brand || 'Generic',
-    image: product?.image || product?.thumbnail || '',
+    image: resolveProductImage(product),
     price: Number(product?.price || 0),
     oldPrice: Number(product?.oldPrice || 0),
     discount: Number(product?.discount || 0),
@@ -30,7 +32,11 @@ export default function ProductCard({ product }) {
 
   return (
     <article className="amazon-product-card">
-      <Link to={`/products/${safeProduct.id}`} className="amazon-product-image">
+      <Link
+        to={`/products/${safeProduct.id}`}
+        className="amazon-product-image"
+        onClick={() => trackProductBehavior('click', { ...product, ...safeProduct }, { source: 'storefront-card' })}
+      >
         <img src={safeProduct.image} alt={safeProduct.name} loading="lazy" />
         {safeProduct.aiRecommended && (
           <span className="amazon-ai-badge">
@@ -42,7 +48,11 @@ export default function ProductCard({ product }) {
 
       <div className="amazon-product-body">
         <p className="amazon-brand-name">{safeProduct.brand}</p>
-        <Link to={`/products/${safeProduct.id}`} className="amazon-product-title">
+        <Link
+          to={`/products/${safeProduct.id}`}
+          className="amazon-product-title"
+          onClick={() => trackProductBehavior('click', { ...product, ...safeProduct }, { source: 'storefront-card' })}
+        >
           {safeProduct.name}
         </Link>
 
@@ -70,7 +80,11 @@ export default function ProductCard({ product }) {
           <p>FREE delivery</p>
         </div>
 
-        <button type="button" onClick={() => addToCart({ ...product, ...safeProduct })}>
+        <button type="button" onClick={() => {
+          const item = { ...product, ...safeProduct }
+          addToCart(item)
+          trackProductBehavior('add_to_cart', item, { source: 'storefront-card' })
+        }}>
           <ShoppingCart size={17} />
           Add to Cart
         </button>

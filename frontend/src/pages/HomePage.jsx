@@ -8,6 +8,8 @@ import CategoryGrid from '../components/CategoryGrid'
 import ProductGrid from '../components/ProductGrid'
 import CartDrawer from '../components/CartDrawer'
 import Footer from '../components/Footer'
+import { getProducts } from '../services/products'
+import { trackSearch } from '../services/behavior'
 import './HomePage.css'
 
 export default function HomePage() {
@@ -18,18 +20,21 @@ export default function HomePage() {
   const [products, setProducts] = useState([])
 
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (category && category !== 'All') params.set('category', category)
-    if (search) params.set('search', search)
-    if (sort) params.set('sort', sort)
-
-    fetch(`/api/products?${params.toString()}`)
-      .then(r => r.json())
-      .then(data => {
-        setProducts(data?.products || data || [])
+    getProducts({ category, search })
+      .then((list) => {
+        setProducts(list)
       })
       .catch(() => setProducts([]))
   }, [category, search, sort])
+
+  useEffect(() => {
+    const term = search.trim()
+    if (!term) return undefined
+    const timeout = setTimeout(() => {
+      trackSearch(term, { source: 'storefront-live-search', category: category === 'All' ? '' : category })
+    }, 900)
+    return () => clearTimeout(timeout)
+  }, [search, category])
 
   const scrollToProducts = () => {
     document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })

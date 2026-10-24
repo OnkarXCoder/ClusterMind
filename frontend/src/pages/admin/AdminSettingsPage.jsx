@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Settings, Globe, Database, Shield, Key, Save, RotateCcw, Download, CheckCircle2 } from 'lucide-react'
 import { useToast } from '../../components/marketing/Toast'
 import './AdminSettingsPage.css'
@@ -10,6 +10,52 @@ const tabs = [
   { key: 'security', label: 'Security', icon: Shield },
   { key: 'api', label: 'API', icon: Key },
 ]
+
+const SETTINGS_KEY = 'clustermind_admin_system_settings'
+
+const defaultSettings = {
+  general: {
+    siteName: 'ShopSmart',
+    siteUrl: 'https://shopsmart.com',
+    supportEmail: 'support@shopsmart.com',
+    timezone: 'Asia/Kolkata',
+  },
+  security: {
+    twoFactor: true,
+    sessionTimeout: 30,
+    passwordMinLength: 8,
+    maxLoginAttempts: 5,
+  },
+  api: {
+    apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxx',
+    webhookUrl: 'https://shopsmart.com/webhook',
+    rateLimit: 1000,
+  },
+  language: {
+    defaultLang: 'en',
+    dateFormat: 'DD/MM/YYYY',
+    currency: 'INR',
+    currencySymbol: '\u20B9',
+  },
+  database: {
+    lastBackup: 'No backup created yet',
+  },
+}
+
+const loadSettings = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+    return {
+      general: { ...defaultSettings.general, ...saved.general },
+      security: { ...defaultSettings.security, ...saved.security },
+      api: { ...defaultSettings.api, ...saved.api },
+      language: { ...defaultSettings.language, ...saved.language },
+      database: { ...defaultSettings.database, ...saved.database },
+    }
+  } catch {
+    return defaultSettings
+  }
+}
 
 function Field({ label, hint, children }) {
   return (
@@ -47,41 +93,93 @@ function NumberInput({ value, onChange, min, max }) {
 
 export default function AdminSettingsPage() {
   const { show } = useToast()
+  const restoreInputRef = useRef(null)
   const [activeTab, setActiveTab] = useState('general')
   const [saved, setSaved] = useState(null)
+  const [database, setDatabase] = useState(() => loadSettings().database)
 
-  const [general, setGeneral] = useState({
-    siteName: 'ShopSmart',
-    siteUrl: 'https://shopsmart.com',
-    supportEmail: 'support@shopsmart.com',
-    timezone: 'Asia/Kolkata',
-  })
+  const [general, setGeneral] = useState(() => loadSettings().general)
 
-  const [security, setSecurity] = useState({
-    twoFactor: true,
-    sessionTimeout: 30,
-    passwordMinLength: 8,
-    maxLoginAttempts: 5,
-  })
+  const [security, setSecurity] = useState(() => loadSettings().security)
 
-  const [api, setApi] = useState({
-    apiKey: 'sk_live_xxxxxxxxxxxxxxxxxxxx',
-    webhookUrl: 'https://shopsmart.com/webhook',
-    rateLimit: 1000,
-  })
+  const [api, setApi] = useState(() => loadSettings().api)
 
-  const [language, setLanguage] = useState({
-    defaultLang: 'en',
-    dateFormat: 'DD/MM/YYYY',
-    currency: 'INR',
-    currencySymbol: '\u20B9',
-  })
+  const [language, setLanguage] = useState(() => loadSettings().language)
+
+  const currentSettings = () => ({ general, language, security, api, database })
+
+  const persistSettings = (next = currentSettings()) => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+  }
 
   const handleSave = (section) => {
     const key = section.toLowerCase()
+    persistSettings()
     setSaved(key)
     show(`${section} settings saved successfully`, 'success')
     setTimeout(() => setSaved(null), 2000)
+  }
+
+  const handleToggleTwoFactor = () => {
+    const nextSecurity = { ...security, twoFactor: !security.twoFactor }
+    setSecurity(nextSecurity)
+    persistSettings({ ...currentSettings(), security: nextSecurity })
+    show(`2FA ${nextSecurity.twoFactor ? 'enabled' : 'disabled'}`, 'success')
+  }
+
+  const handleBackup = () => {
+    const backup = {
+      createdAt: new Date().toISOString(),
+      settings: currentSettings(),
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    link.href = url
+    link.download = `clustermind-settings-backup-${timestamp}.json`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+
+    const sizeKb = Math.max(1, Math.round(blob.size / 1024))
+    const nextDatabase = {
+      lastBackup: `${new Date().toLocaleString('en-IN')} - ${sizeKb} KB`,
+    }
+    setDatabase(nextDatabase)
+    persistSettings({ ...currentSettings(), database: nextDatabase })
+    show('Settings backup downloaded.', 'success')
+  }
+
+  const handleRestoreFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const parsed = JSON.parse(await file.text())
+      const restored = parsed.settings || parsed
+      const next = {
+        general: { ...defaultSettings.general, ...restored.general },
+        language: { ...defaultSettings.language, ...restored.language },
+        security: { ...defaultSettings.security, ...restored.security },
+        api: { ...defaultSettings.api, ...restored.api },
+        database: {
+          ...defaultSettings.database,
+          ...restored.database,
+          lastBackup: `Restored ${new Date().toLocaleString('en-IN')}`,
+        },
+      }
+      setGeneral(next.general)
+      setLanguage(next.language)
+      setSecurity(next.security)
+      setApi(next.api)
+      setDatabase(next.database)
+      persistSettings(next)
+      show('Settings restored successfully.', 'success')
+    } catch {
+      show('Unable to restore settings. Choose a valid JSON backup.', 'error')
+    }
   }
 
   return (
@@ -183,7 +281,7 @@ export default function AdminSettingsPage() {
                   <p className="settings-db-title">Backup Database</p>
                   <p className="settings-db-desc">Create a full backup of all data</p>
                 </div>
-                <button className="settings-db-btn primary" onClick={() => show('Database backup initiated (demo)', 'success')}>
+                <button className="settings-db-btn primary" onClick={handleBackup}>
                   <Download className="h-4 w-4" /> Start Backup
                 </button>
               </div>
@@ -195,14 +293,15 @@ export default function AdminSettingsPage() {
                   <p className="settings-db-title">Restore Database</p>
                   <p className="settings-db-desc">Restore from a previous backup</p>
                 </div>
-                <button className="settings-db-btn secondary" onClick={() => show('Database restore initiated (demo)', 'info')}>
+                <button className="settings-db-btn secondary" onClick={() => restoreInputRef.current?.click()}>
                   <RotateCcw className="h-4 w-4" /> Start Restore
                 </button>
+                <input ref={restoreInputRef} type="file" accept="application/json,.json" className="sr-only" onChange={handleRestoreFile} />
               </div>
             </div>
             <div className="settings-db-last">
               <p className="settings-db-last-label">Last Backup</p>
-              <p className="settings-db-last-value">28 May 2024, 2:00 AM &mdash; 245 MB</p>
+              <p className="settings-db-last-value">{database.lastBackup}</p>
             </div>
           </div>
         )}
@@ -221,10 +320,7 @@ export default function AdminSettingsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSecurity({ ...security, twoFactor: !security.twoFactor })
-                    show(`2FA ${!security.twoFactor ? 'enabled' : 'disabled'} (demo)`, 'success')
-                  }}
+                  onClick={handleToggleTwoFactor}
                   className={`settings-toggle ${security.twoFactor ? 'on' : ''}`}
                 >
                   <span className={`settings-toggle-thumb ${security.twoFactor ? 'on' : ''}`} />

@@ -7,6 +7,10 @@ const router = Router()
 
 router.use(verifyToken)
 
+function generateOrderId() {
+  return `CM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+}
+
 router.get('/', async (req, res) => {
   try {
     const isStaff = ['admin', 'marketing'].includes(req.user.role)
@@ -62,6 +66,7 @@ router.post('/', async (req, res) => {
     const discount = Number(totals?.discount) || 0
 
     const order = await Order.create({
+      orderId: generateOrderId(),
       customerId: req.user.id,
       items: normalized,
       address: address || {},
@@ -71,7 +76,9 @@ router.post('/', async (req, res) => {
         subtotal,
         shipping: shippingPrice,
         discount,
-        total: Math.max(0, subtotal + shippingPrice - discount),
+        total: Number.isFinite(Number(totals?.total))
+          ? Number(totals.total)
+          : Math.max(0, subtotal + shippingPrice - discount),
       },
     })
 

@@ -6,14 +6,15 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/',
   server: {
-    host: '127.0.0.1',
+    host: '0.0.0.0',
     port: 5173,
     strictPort: true,
     open: true,
+    allowedHosts: ['miah-traceried-aliyah.ngrok-free.dev'],
     hmr: {
-      host: '127.0.0.1',
+      host: 'miah-traceried-aliyah.ngrok-free.dev',
       protocol: 'ws',
-      clientPort: 5173,
+      clientPort: 443,
     },
     proxy: {
       '/api': 'http://localhost:4000',

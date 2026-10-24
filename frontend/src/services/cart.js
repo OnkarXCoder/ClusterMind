@@ -27,11 +27,12 @@ export const getCartCount = () => read().reduce((sum, i) => sum + i.quantity, 0)
 
 export const addToCart = (product, quantity = 1) => {
   const cart = read();
-  const existing = cart.find((i) => i.productId === product.id);
+  const productId = product.id || product._id || product.productId;
+  const existing = cart.find((i) => i.productId === productId);
   if (existing) {
     existing.quantity += quantity;
   } else {
-    cart.push({ productId: product.id, quantity, addedAt: Date.now() });
+    cart.push({ productId, quantity, addedAt: Date.now() });
   }
   write(cart);
   return cart;

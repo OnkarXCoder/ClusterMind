@@ -3,6 +3,7 @@ import { Sparkles, Star, ShoppingCart, BrainCircuit } from "lucide-react";
 import { addToCart } from "../../services/cart";
 import { useState, useEffect } from "react";
 import { clearInvalidSession, getAuthHeaders, hasRemoteAuth, isAuthenticated } from "../../services/auth";
+import { resolveProductImage } from "../../utils/productImages";
 
 const fmt = (n) => n?.toLocaleString("en-IN") || "0";
 
@@ -21,15 +22,22 @@ function AIRecommendations({ showEmptyState = false }) {
       .then(data => {
         const list = data?.recommendations || data?.products || data || [];
         if (Array.isArray(list) && list.length > 0) {
-          setItems(list.slice(0, 4).map(r => ({
-            id: r.productId || r._id || r.id,
-            name: r.name || r.productName || 'Recommended Product',
-            price: r.price || 0,
-            rating: r.rating || 4.5,
-            image: r.image || r.thumbnail || '',
-            reason: r.reason || r.explanation || 'Recommended for you',
-            category: r.category || '',
-          })));
+          setItems(list.slice(0, 4).map(r => {
+            const product = r.product || {};
+            const normalized = {
+              id: product.id || product._id || r.productId || r._id || r.id,
+              name: product.name || r.name || r.productName || "Recommended Product",
+              price: product.price ?? r.price ?? 0,
+              rating: product.rating ?? r.rating ?? 4.5,
+              image: product.image || r.image || product.thumbnail || r.thumbnail || "",
+              reason: r.reason || r.explanation || "Recommended for you",
+              category: product.category || r.category || "",
+            };
+            return {
+              ...normalized,
+              image: resolveProductImage(normalized),
+            };
+          }));
         }
       })
       .catch(() => {});

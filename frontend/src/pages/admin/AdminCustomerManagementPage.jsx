@@ -8,12 +8,14 @@ import Modal from '../../components/marketing/Modal'
 import LoadingState from '../../components/marketing/LoadingState'
 import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminCustomers, updateAdminCustomerStatus } from '../../api'
+import { getAdminCustomer, getAdminCustomers, updateAdminCustomerStatus } from '../../api'
 
 export default function AdminCustomerManagementPage() {
   const { show } = useToast()
   const [search, setSearch] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [customerDetails, setCustomerDetails] = useState(null)
+  const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailTab, setDetailTab] = useState('purchase')
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -48,6 +50,22 @@ export default function AdminCustomerManagementPage() {
     }
   }
 
+  const handleView = async (customer) => {
+    setSelectedCustomer(customer)
+    setDetailTab('purchase')
+    setDetailsLoading(true)
+    setCustomerDetails(null)
+    try {
+      const details = await getAdminCustomer(customer.id)
+      setCustomerDetails(details || null)
+      if (!details) show('Unable to load customer details.', 'error')
+    } catch (err) {
+      show(err.message || 'Unable to load customer details.', 'error')
+    } finally {
+      setDetailsLoading(false)
+    }
+  }
+
   const tabs = [
     { key: 'purchase', label: 'Purchase History', icon: ShoppingCart },
     { key: 'browsing', label: 'Browsing History', icon: Eye },
@@ -56,6 +74,18 @@ export default function AdminCustomerManagementPage() {
     { key: 'cart', label: 'Cart Activity', icon: ShoppingCart },
     { key: 'feedback', label: 'Feedback & Reviews', icon: MessageSquare },
   ]
+
+  const formatDate = (value) => {
+    if (!value) return 'N/A'
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   return (
     <div className="dm-page">
@@ -109,7 +139,7 @@ export default function AdminCustomerManagementPage() {
                       <td><StatusBadge status={c.status} /></td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                          <Button variant="ghost" size="sm" icon={Eye} onClick={() => { setSelectedCustomer(c); setDetailTab('purchase') }}>View</Button>
+                          <Button variant="ghost" size="sm" icon={Eye} onClick={() => handleView(c)}>View</Button>
                           <button
                             onClick={() => handleBlock(c)}
                             style={{ padding: 8, borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', color: c.status === 'Blocked' ? '#10B981' : '#F87171' }}
@@ -150,47 +180,173 @@ export default function AdminCustomerManagementPage() {
               ))}
             </div>
 
-            {detailTab === 'purchase' && (
-              <EmptyState
-                title="No purchase history"
-                description="Purchase history for this customer is not available yet."
-              />
-            )}
+            {detailsLoading ? (
+              <LoadingState label="Loading customer activity..." />
+            ) : detailTab === 'purchase' && customerDetails?.purchaseHistory?.length ? (
+              <div className="dm-table-wrap">
+                <table className="dm-table">
+                  <thead>
+                    <tr>
+                      <th>Order</th>
+                      <th>Date</th>
+                      <th>Items</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerDetails.purchaseHistory.map((order) => (
+                      <tr key={order.orderId}>
+                        <td style={{ fontWeight: 700 }}>{order.orderId}</td>
+                        <td>{order.date}</td>
+                        <td>{order.items}</td>
+                        <td style={{ fontWeight: 700 }}>Rs {Number(order.total || 0).toLocaleString()}</td>
+                        <td><StatusBadge status={order.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : detailTab === 'purchase' ? (
+              <EmptyState title="No purchase history" description="Purchase history for this customer is not available yet." />
+            ) : null}
 
-            {detailTab === 'browsing' && (
+            {detailTab === 'browsing' && customerDetails?.browsingHistory?.length ? (
+              <div className="dm-table-wrap">
+                <table className="dm-table">
+                  <thead>
+                    <tr>
+                      <th>Action</th>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Source</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerDetails.browsingHistory.map((item) => (
+                      <tr key={item.id}>
+                        <td><StatusBadge status={item.action === 'view' ? 'Active' : 'Draft'} /></td>
+                        <td style={{ fontWeight: 700 }}>{item.productName || 'Product'}</td>
+                        <td>{item.category || 'N/A'}</td>
+                        <td>{item.source || 'N/A'}</td>
+                        <td>{formatDate(item.date)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : detailTab === 'browsing' ? (
               <EmptyState
                 title="No browsing history"
                 description="Browsing activity for this customer is not available yet."
               />
-            )}
+            ) : null}
 
-            {detailTab === 'search' && (
+            {detailTab === 'search' && customerDetails?.searchHistory?.length ? (
+              <div className="dm-table-wrap">
+                <table className="dm-table">
+                  <thead>
+                    <tr>
+                      <th>Search Term</th>
+                      <th>Category</th>
+                      <th>Source</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerDetails.searchHistory.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ fontWeight: 700 }}>{item.searchTerm}</td>
+                        <td>{item.category || 'All'}</td>
+                        <td>{item.source || 'N/A'}</td>
+                        <td>{formatDate(item.date)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : detailTab === 'search' ? (
               <EmptyState
                 title="No search history"
                 description="Search activity for this customer is not available yet."
               />
-            )}
+            ) : null}
 
-            {detailTab === 'wishlist' && (
+            {detailTab === 'wishlist' && customerDetails?.wishlist?.length ? (
+              <div className="dm-table-wrap">
+                <table className="dm-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerDetails.wishlist.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ fontWeight: 700 }}>{item.productName}</td>
+                        <td>{item.category || 'N/A'}</td>
+                        <td>{formatDate(item.date)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : detailTab === 'wishlist' ? (
               <EmptyState
                 title="No wishlist items"
                 description="This customer's wishlist is not available yet."
               />
-            )}
+            ) : null}
 
-            {detailTab === 'cart' && (
+            {detailTab === 'cart' && customerDetails?.cartActivity?.length ? (
+              <div className="dm-table-wrap">
+                <table className="dm-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Source</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerDetails.cartActivity.map((item) => (
+                      <tr key={item.id}>
+                        <td style={{ fontWeight: 700 }}>{item.productName || 'Product'}</td>
+                        <td>{item.category || 'N/A'}</td>
+                        <td>{item.source || 'N/A'}</td>
+                        <td>{formatDate(item.date)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : detailTab === 'cart' ? (
               <EmptyState
                 title="No cart activity"
                 description="Cart activity for this customer is not available yet."
               />
-            )}
+            ) : null}
 
-            {detailTab === 'feedback' && (
-              <EmptyState
-                title="No feedback"
-                description="Feedback and reviews for this customer are not available yet."
-              />
-            )}
+            {detailTab === 'feedback' && customerDetails?.feedback?.length ? (
+              <div className="space-y-3">
+                {customerDetails.feedback.map((item) => (
+                  <div key={item.id} className="rounded-xl bg-slate-50 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-slate-900">{item.product || item.type}</span>
+                      <span className="text-xs font-semibold text-slate-500">{item.date}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600">{item.content}</p>
+                    <p className="mt-2 text-xs font-bold text-amber-600">Rating: {item.rating || 'N/A'}</p>
+                  </div>
+                ))}
+              </div>
+            ) : detailTab === 'feedback' ? (
+              <EmptyState title="No feedback" description="Feedback and reviews for this customer are not available yet." />
+            ) : null}
           </div>
         )}
       </Modal>

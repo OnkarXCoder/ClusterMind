@@ -8,6 +8,8 @@ import fashion from "../../assets/categories/fashion.svg";
 import home from "../../assets/categories/home.svg";
 import beauty from "../../assets/categories/beauty.svg";
 import sports from "../../assets/categories/sports.svg";
+import { MAIN_CATEGORY_NAMES, categoryMatches } from "../../data/categoryCatalog";
+import { resolveCategoryImage } from "../../utils/productImages";
 
 const iconMap = { Books: <BookOpen size={28} color="#7C3AED" />, 'Toys & Games': <Puzzle size={28} color="#0F766E" />, Automotive: <Car size={28} color="#2563EB" /> };
 const colorMap = { Electronics: "#DBEAFE", Fashion: "#FCE7F3", 'Home & Kitchen': "#DCFCE7", Beauty: "#FCE7F3", Sports: "#FEF3C7", Books: "#EDE9FE", 'Toys & Games': "#CCFBF1", Automotive: "#E0F2FE" };
@@ -19,26 +21,23 @@ function TrendingCategories() {
   useEffect(() => {
     let active = true;
 
-    fetch("/api/products/categories")
+    fetch("/api/products")
       .then(r => r.json())
-      .then(async (data) => {
-        const cats = data?.categories || [];
-        const counts = await Promise.all(
-          cats.map((name) =>
-            fetch(`/api/products?category=${encodeURIComponent(name)}`)
-              .then(r => r.json())
-              .then(d => [name, d?.count ?? d?.products?.length ?? 0])
-              .catch(() => [name, 0])
-          )
+      .then((data) => {
+        const products = data?.products || [];
+        const countMap = Object.fromEntries(
+          MAIN_CATEGORY_NAMES.map((name) => [
+            name,
+            name === "All Products" ? products.length : products.filter((p) => categoryMatches(p.category, name)).length,
+          ])
         );
-        const countMap = Object.fromEntries(counts);
 
         if (!active) return;
-        setCategories(cats.map((name) => ({
+        setCategories(MAIN_CATEGORY_NAMES.map((name) => ({
           id: name.toLowerCase().replace(/\s+/g, '-'),
           name,
           items: countMap[name] || 0,
-          image: imgMap[name] || undefined,
+          image: imgMap[name] || resolveCategoryImage(name),
           icon: iconMap[name] || undefined,
           color: colorMap[name] || "#F1F5F9",
         })));

@@ -11,6 +11,17 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "ai-ml",
+        "name": "ClusterMind AI/ML Service",
+        "status": "ok",
+        "endpoints": ["/", "/api/health"],
+        "note": "The clustering/segmentation ML used by the app runs inside the Node backend at /api/ml/*.",
+    }
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "ai-ml"}

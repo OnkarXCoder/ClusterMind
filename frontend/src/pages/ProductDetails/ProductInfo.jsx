@@ -9,6 +9,8 @@ import {
   Plus,
   CheckCircle2,
 } from "lucide-react";
+import { addToCart } from "../../services/cart";
+import { trackProductBehavior } from "../../services/behavior";
 import "./ProductDetails.css";
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
@@ -27,6 +29,8 @@ export default function ProductInfo({ product }) {
   const saved = Math.max(0, oldPrice - price);
 
   const handleAdd = () => {
+    addToCart(product, qty);
+    trackProductBehavior("add_to_cart", product, { source: "product-details", metadata: { quantity: qty } });
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };

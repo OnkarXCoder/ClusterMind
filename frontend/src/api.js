@@ -39,10 +39,24 @@ export function loginUser(identifier, password) {
   })
 }
 
-export function resetPassword(contact, password) {
-  return request('/auth/forgot-password', {
+export function sendPasswordResetOtp(email) {
+  return request('/auth/forgot-password/send-otp', {
     method: 'POST',
-    body: JSON.stringify({ contact, password }),
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function verifyPasswordResetOtp(email, otp) {
+  return request('/auth/forgot-password/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp }),
+  })
+}
+
+export function resetPassword(resetToken, password) {
+  return request('/auth/forgot-password/reset', {
+    method: 'POST',
+    body: JSON.stringify({ resetToken, password }),
   })
 }
 
@@ -352,6 +366,18 @@ export function createMarketingCoupon(payload) {
   })
 }
 
+export function getMarketingOffers(params = {}) {
+  const qs = new URLSearchParams(params).toString()
+  return marketingRequest(`/offers${qs ? `?${qs}` : ''}`)
+}
+
+export function createMarketingOffer(payload) {
+  return marketingRequest('/offers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function deleteMarketingCoupon(id) {
   return marketingRequest(`/coupons/${id}`, {
     method: 'DELETE',
@@ -393,6 +419,10 @@ export function getMarketingRecommendations(params = {}) {
 export function getMarketingProducts(params = {}) {
   const qs = new URLSearchParams(params).toString()
   return marketingRequest(`/products${qs ? `?${qs}` : ''}`)
+}
+
+export function getMarketingReports() {
+  return marketingRequest('/reports')
 }
 
 export function getMarketingProfile() {

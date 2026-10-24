@@ -19,7 +19,8 @@ import { clearCart } from "../../services/cart";
 import { getProductById } from "../../services/products";
 import { getCurrentUser } from "../../services/auth";
 import { openRazorpayCheckout } from "../../services/razorpay";
-import { getPaymentConfig, createOrder, createPaymentOrder } from "../../api";
+import { trackProductBehavior } from "../../services/behavior";
+import { getPaymentConfig, createOrder, createPaymentOrder, verifyPayment } from "../../api";
 import {
   getSavedAddress,
   saveAddress,
@@ -85,22 +86,69 @@ export default function Checkout() {
     saveAddress(addr);
   };
 
-  // Cash on delivery keeps the existing local-only behaviour
-  const handlePlaceOrder = () => {
+  const buildOrderPayload = () => ({
+    items: items.map((i) => ({
+      productId: i.product.id,
+      name: i.product.name,
+      image: i.product.image,
+      quantity: i.quantity,
+      price: i.product.price,
+    })),
+    address,
+    shipping: { label: shippingMethod.label, eta: shippingMethod.eta, price: delivery },
+    payment: { label: PAYMENT_METHODS.find((p) => p.id === payment)?.label || "Cash on Delivery" },
+    totals: { subtotal, shipping: delivery, discount, gst, total },
+  });
+
+  const saveLocalDisplayOrder = (serverOrder = null) =>
+    placeOrder({
+      id: serverOrder?.orderId || serverOrder?._id,
+      items,
+      address,
+      shipping: shippingMethod,
+      payment: PAYMENT_METHODS.find((p) => p.id === payment),
+      totals: { subtotal, discount, delivery, gst, total },
+      placedAt: serverOrder?.createdAt,
+    });
+
+  const trackPurchaseHistory = () => {
+    items.forEach((item) => {
+      trackProductBehavior("purchase", item.product, {
+        source: "checkout",
+        metadata: {
+          quantity: item.quantity,
+          orderTotal: total,
+          payment,
+        },
+      });
+    });
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!address?.fullName || !address?.phone || !address?.addressLine || !address?.city || !address?.state || !address?.pincode) {
+      setPayError("Please add a complete delivery address before placing the order.");
+      return;
+    }
+
     if (payment === "cod" || !gateway?.configured) {
       setPayError("");
       setPlacing(true);
-      setTimeout(() => {
-        const order = placeOrder({
-          items,
-          address,
-          shipping: shippingMethod,
-          payment: PAYMENT_METHODS.find((p) => p.id === payment),
-          totals: { subtotal, discount, delivery, gst, total },
-        });
+      try {
+        const created = await createOrder(buildOrderPayload());
+        const order = saveLocalDisplayOrder(created.order);
+        trackPurchaseHistory();
         clearCart();
         navigate(`/order-success/${order.id}`);
-      }, 1200);
+      } catch (err) {
+        // Do NOT invent a local order here: if the server rejected the order
+        // (or was unreachable) the customer must see an error, not a fake
+        // success screen for an order that does not exist.
+        setPayError(
+          err?.message || "We couldn't place your order. Please try again."
+        );
+      } finally {
+        setPlacing(false);
+      }
       return;
     }
     payWithRazorpay();
@@ -114,26 +162,14 @@ export default function Checkout() {
     try {
       // 1. Persist the order server-side first — the gateway amount and the
       //    final payment record both hang off this document.
-      const created = await createOrder({
-        items: items.map((i) => ({
-          productId: i.product.id,
-          name: i.product.name,
-          image: i.product.image,
-          quantity: i.quantity,
-          price: i.product.price,
-        })),
-        address,
-        shipping: { label: shippingMethod.label, eta: shippingMethod.eta, price: delivery },
-        payment: { label: PAYMENT_METHODS.find((p) => p.id === payment)?.label || "Razorpay" },
-        totals: { subtotal, shipping: delivery, discount: discount + gst, total },
-      });
+      const created = await createOrder(buildOrderPayload());
       dbOrder = created.order;
 
       // 2. Ask the backend for a Razorpay order (amount comes from the DB)
       const gatewayOrder = await createPaymentOrder(dbOrder._id);
 
       // 3. Open the modal
-      await openRazorpayCheckout({
+      const checkoutResult = await openRazorpayCheckout({
         order: {
           gatewayOrderId: gatewayOrder.gatewayOrderId,
           amount: gatewayOrder.amount,
@@ -144,9 +180,20 @@ export default function Checkout() {
         user: getCurrentUser(),
       });
 
-      // 4. Only now navigate — we know the payment cleared
+      // 4. The browser callback is not proof of payment — the server verifies
+      //    Razorpay's HMAC signature before the order is marked paid.
+      await verifyPayment({
+        orderId: dbOrder._id,
+        gatewayOrderId: checkoutResult.gatewayOrderId,
+        paymentId: checkoutResult.paymentId,
+        signature: checkoutResult.signature,
+      });
+
+      // 5. Only now navigate — the payment has been verified by the server
+      const order = saveLocalDisplayOrder(dbOrder);
+      trackPurchaseHistory();
       clearCart();
-      navigate(`/order-success/${dbOrder._id}?paid=1`);
+      navigate(`/order-success/${order.id}?paid=1`);
     } catch (err) {
       if (err?.code === "PAYMENT_DISMISSED" || err?.message === "PAYMENT_DISMISSED") {
         setPayError("Payment cancelled. Your items are still in the cart.");

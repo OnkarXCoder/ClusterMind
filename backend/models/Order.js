@@ -13,6 +13,7 @@ const orderItemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
+    orderId: { type: String, index: true, sparse: true },
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     items: { type: [orderItemSchema], default: [] },
     address: {

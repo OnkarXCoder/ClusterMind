@@ -33,6 +33,18 @@ app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf },
 }))
 
+// On serverless hosts a request can arrive before the MongoDB connection is
+// ready. Await it (cached) so the first request after a cold start does not
+// 500.
+app.use(async (_req, _res, next) => {
+  try {
+    await ensureDB()
+    next()
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'backend' })
 })

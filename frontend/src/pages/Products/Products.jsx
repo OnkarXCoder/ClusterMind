@@ -12,6 +12,7 @@ import {
   getBrands,
   getProducts,
 } from "../../services/products";
+import { trackSearch } from "../../services/behavior";
 import "./Products.css";
 
 const emptyFilters = {
@@ -25,7 +26,8 @@ export default function Products() {
   const [searchParams] = useSearchParams();
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState(searchParams.get("category") || "All Products");
+  const [subcategory, setSubcategory] = useState("");
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [filters, setFilters] = useState(emptyFilters);
   const [showFilter, setShowFilter] = useState(false);
@@ -33,7 +35,25 @@ export default function Products() {
 
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
+    setCategory(searchParams.get("category") || "All Products");
+    setSubcategory("");
   }, [searchParams]);
+
+  useEffect(() => {
+    const term = searchParams.get("q") || "";
+    if (term.trim()) {
+      trackSearch(term, { source: "products-url" });
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (!term) return undefined;
+    const timeout = setTimeout(() => {
+      trackSearch(term, { source: "products-live-search", category });
+    }, 900);
+    return () => clearTimeout(timeout);
+  }, [query, category]);
 
   useEffect(() => {
     let active = true;
@@ -55,6 +75,7 @@ export default function Products() {
     getProducts({
         search: query,
         category,
+        subcategory,
         ...filters,
       }).then((list) => {
         if (active) setProducts(list);
@@ -63,12 +84,13 @@ export default function Products() {
     return () => {
       active = false;
     };
-  }, [query, category, filters]);
+  }, [query, category, subcategory, filters]);
 
   const clearAll = () => {
     setFilters(emptyFilters);
     setQuery("");
-    setCategory("All");
+    setCategory("All Products");
+    setSubcategory("");
   };
 
   return (
@@ -88,7 +110,9 @@ export default function Products() {
           <CategoryList
             categories={categories}
             selected={category}
+            selectedSubcategory={subcategory}
             onSelect={setCategory}
+            onSubcategorySelect={setSubcategory}
           />
 
           <div className="products-toolbar">

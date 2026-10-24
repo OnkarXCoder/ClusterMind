@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, BookOpen, Dumbbell, Flower2, Home as HomeIcon, Laptop, Shirt } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { MAIN_CATEGORY_NAMES } from '../data/categoryCatalog'
+import { resolveCategoryImage } from '../utils/productImages'
 
 const iconMap = { Electronics: Laptop, Fashion: Shirt, 'Home & Kitchen': HomeIcon, Beauty: Flower2, Sports: Dumbbell, Books: BookOpen }
 const colorMap = { Electronics: 'from-indigo-500 to-blue-500', Fashion: 'from-rose-500 to-pink-500', 'Home & Kitchen': 'from-emerald-500 to-teal-500', Beauty: 'from-fuchsia-500 to-purple-500', Sports: 'from-orange-500 to-amber-500', Books: 'from-cyan-500 to-sky-500' }
@@ -13,19 +15,19 @@ export default function CategoryGrid({ onSelect }) {
     fetch('/api/products/categories')
       .then(r => r.json())
       .then(data => {
-        const cats = data?.categories || []
+        const cats = [...new Set([...MAIN_CATEGORY_NAMES, ...(data?.categories || [])])]
         setCategories(cats.map(name => ({
           name,
           icon: iconMap[name] || Laptop,
-          img: imgMap[name] || '/products/default.jpg',
+          img: imgMap[name] || resolveCategoryImage(name),
           color: colorMap[name] || 'from-slate-500 to-gray-500',
         })))
       })
       .catch(() => {
-        setCategories(Object.keys(iconMap).map(name => ({
+        setCategories(MAIN_CATEGORY_NAMES.map(name => ({
           name,
           icon: iconMap[name],
-          img: imgMap[name],
+          img: imgMap[name] || resolveCategoryImage(name),
           color: colorMap[name],
         })))
       })

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Navbar from "../../components/Navbar/Navbar";
 import { getProductById } from "../../services/products";
+import { trackProductBehavior } from "../../services/behavior";
 import ImageGallery from "./ImageGallery";
 import ProductInfo from "./ProductInfo";
 import DeliveryChecker from "./DeliveryChecker";
@@ -27,6 +28,9 @@ export default function ProductDetails() {
       if (!cancelled) {
         setProduct(resolvedProduct);
         setLoading(false);
+        if (resolvedProduct) {
+          trackProductBehavior("view", resolvedProduct, { source: "product-details" });
+        }
       }
     });
 

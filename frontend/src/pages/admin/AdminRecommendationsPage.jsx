@@ -16,13 +16,21 @@ export default function AdminRecommendationsPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadRecommendations = () => {
     let active = true
+    setLoading(true)
     getAdminRecommendations()
-      .then((res) => { if (active && res) setData(res) })
-      .catch(() => {})
+      .then((res) => {
+        if (active && res) setData(res)
+        if (active && !res) show('Unable to load AI recommendations.', 'error')
+      })
+      .catch((err) => { if (active) show(err.message || 'Unable to load AI recommendations.', 'error') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
+  }
+
+  useEffect(() => {
+    return loadRecommendations()
   }, [])
 
   if (loading) return <LoadingState label="Loading recommendations..." />
@@ -91,8 +99,8 @@ export default function AdminRecommendationsPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Button variant="secondary" icon={RefreshCw} onClick={() => show('History refreshed (demo)', 'info')}>Refresh</Button>
-        <Button icon={Sparkles} onClick={() => show('Recommendations regenerated (demo)', 'success')}>Generate</Button>
+        <Button variant="secondary" icon={RefreshCw} onClick={loadRecommendations}>Refresh</Button>
+        <Button icon={Sparkles} onClick={loadRecommendations}>Generate</Button>
       </div>
 
       <div className="dm-grid-4">

@@ -1,0 +1,19 @@
+{
+  "columns": [
+    "Customer ID",
+    "Gender",
+    "Age",
+    "City",
+    "Membership Type",
+    "Total Spend",
+    "Items Purchased",
+    "Average Rating",
+    "Discount Applied",
+    "Days Since Last Purchase",
+    "Satisfaction Level"
+  ],
+  "target_column": "Satisfaction Level",
+  "uploaded_at": "2026-10-08T14:44:52.696Z",
+  "filename": "dataset.csv",
+  "rows": 350
+}

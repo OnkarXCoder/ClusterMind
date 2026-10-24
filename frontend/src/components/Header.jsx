@@ -14,10 +14,19 @@ const useCategories = () => {
 }
 import { useCart } from '../context/CartContext'
 import { logout } from '../services/auth'
+import { trackSearch } from '../services/behavior'
 
 export default function Header({ search, onSearchChange, onCategorySelect }) {
   const { count, setIsOpen } = useCart()
   const categories = useCategories()
+  const [category, setCategory] = useState('All')
+
+  const submitSearch = () => {
+    trackSearch(search, {
+      source: 'storefront-header',
+      category: category === 'All' ? '' : category,
+    })
+  }
 
   return (
     <header className="amazon-header">
@@ -38,7 +47,7 @@ export default function Header({ search, onSearchChange, onCategorySelect }) {
         </div>
 
         <div className="amazon-search">
-          <select aria-label="Search category" defaultValue="All">
+          <select aria-label="Search category" value={category} onChange={(e) => setCategory(e.target.value)}>
             <option>All</option>
             {categories.filter((c) => c !== 'All').map((c) => (
               <option key={c}>{c}</option>
@@ -48,9 +57,12 @@ export default function Header({ search, onSearchChange, onCategorySelect }) {
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitSearch()
+            }}
             placeholder="Search ShopSmart"
           />
-          <button type="button" aria-label="Search">
+          <button type="button" aria-label="Search" onClick={submitSearch}>
             <Search size={22} />
           </button>
         </div>

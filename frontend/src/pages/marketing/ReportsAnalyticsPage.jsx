@@ -33,7 +33,7 @@ import Button from '../../components/marketing/Button'
 import LoadingState from '../../components/marketing/LoadingState'
 import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminReports } from '../../api'
+import { getMarketingReports } from '../../api'
 
 const SEGMENT_COLORS = ['#7c3aed', '#2563eb', '#10b981', '#f59e0b', '#ec4899']
 
@@ -44,7 +44,7 @@ export default function ReportsAnalyticsPage() {
 
   useEffect(() => {
     let active = true
-    getAdminReports()
+    getMarketingReports()
       .then((res) => {
         if (active && res) {
           setData(res)
@@ -117,7 +117,7 @@ export default function ReportsAnalyticsPage() {
   const revenueHistory = data?.revenueHistory ?? []
   const campaignPerformance = data?.campaignPerformance ?? []
   const customerGrowth = data?.customerGrowth ?? []
-  const segments = [
+  const segments = data?.segmentRevenue ?? [
     { name: 'Premium Segment', value: 38 },
     { name: 'Loyal Customers', value: 29 },
     { name: 'Price Sensitive', value: 18 },

@@ -125,6 +125,26 @@
   box-shadow: 0 8px 18px rgba(79, 70, 229, 0.16);
 }
 
+.nav-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  background: #EF4444;
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.nav-logout:hover {
+  background: #DC2626;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 1200px) {
   .search-box {
     width: 400px;
@@ -150,6 +170,14 @@
     display: none;
   }
 
+  .nav-logout span {
+    display: none;
+  }
+
+  .nav-logout {
+    padding: 10px;
+  }
+
   .nav-right {
     gap: 16px;
   }
@@ -172,5 +200,10 @@
   .profile img {
     width: 34px;
     height: 34px;
+  }
+
+  .nav-logout {
+    border-radius: 10px;
+    padding: 9px;
   }
 }

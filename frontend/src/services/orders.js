@@ -48,10 +48,10 @@ export const PAYMENT_METHODS = [
   { id: "cod", label: "Cash on Delivery", color: "#92400E" },
 ];
 
-export const placeOrder = ({ items, address, shipping, payment, totals }) => {
+export const placeOrder = ({ id, items, address, shipping, payment, totals, placedAt }) => {
   const orders = readOrders();
   const order = {
-    id: "ORD" + Date.now(),
+    id: id || "ORD" + Date.now(),
     items: items.map((i) => ({
       productId: i.product.id,
       name: i.product.name,
@@ -66,7 +66,7 @@ export const placeOrder = ({ items, address, shipping, payment, totals }) => {
     payment: payment.label,
     totals,
     status: "Processing",
-    placedAt: new Date().toISOString(),
+    placedAt: placedAt || new Date().toISOString(),
   };
   orders.unshift(order);
   writeOrders(orders);

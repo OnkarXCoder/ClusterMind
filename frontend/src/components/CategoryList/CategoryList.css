@@ -1,55 +1,67 @@
-.category-list{
-
+.category-list-wrap{
 display:flex;
-
+flex-direction:column;
 gap:12px;
-
-flex-wrap:wrap;
-
 margin-bottom:25px;
+}
 
+.category-list,
+.subcategory-list{
+display:flex;
+gap:12px;
+overflow-x:auto;
+padding-bottom:4px;
+scrollbar-width:thin;
 }
 
 .category-chip{
-
 display:flex;
-
 align-items:center;
-
 gap:8px;
-
 padding:10px 18px;
-
 background:#fff;
-
 border:1px solid #E2E8F0;
-
 border-radius:50px;
-
 font-size:14px;
-
 font-weight:600;
-
 cursor:pointer;
-
 transition:.3s;
-
+white-space:nowrap;
 }
 
 .category-chip:hover{
-
 border-color:#4F46E5;
-
 color:#4F46E5;
-
 }
 
 .category-chip.active{
-
 background:#4F46E5;
-
 border-color:#4F46E5;
-
 color:white;
+}
 
+.subcategory-list{
+gap:10px;
+}
+
+.subcategory-chip{
+display:flex;
+align-items:center;
+padding:8px 14px;
+background:#EEF2FF;
+border:1px solid #C7D2FE;
+border-radius:999px;
+color:#4338CA;
+font-size:13px;
+font-weight:700;
+cursor:pointer;
+white-space:nowrap;
+transition:.2s;
+}
+
+.subcategory-chip:hover,
+.subcategory-chip.active{
+background:#111827;
+border-color:#111827;
+color:#fff;
 }

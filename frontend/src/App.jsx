@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import { isAuthenticated } from "./services/auth";
 
@@ -30,6 +30,12 @@ import Offers from "./pages/Offers/Offers";
 import Recommendations from "./pages/Recommendations/Recommendations";
 import GiftAssistant from "./pages/GiftAssistant/GiftAssistant";
 import AISalesperson from "./components/AISalesperson/AISalesperson";
+
+function FloatingAssistant() {
+  const location = useLocation();
+  if (location.pathname.startsWith("/admin")) return null;
+  return <AISalesperson />;
+}
 
 function App() {
   const loggedIn = isAuthenticated();
@@ -67,7 +73,7 @@ function App() {
           {adminRoutes()}
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          <AISalesperson />
+          <FloatingAssistant />
         </ToastProvider>
       </CartProvider>
     </BrowserRouter>

@@ -14,6 +14,21 @@ export const getCurrentUser = () => {
   }
 };
 
+export const setCurrentUser = (user) => {
+  if (!user) {
+    localStorage.removeItem(USER_KEY);
+    return null;
+  }
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  const users = getUsers();
+  const index = users.findIndex((u) => String(u.id || u._id) === String(user.id || user._id));
+  if (index >= 0) {
+    users[index] = { ...users[index], ...user, updatedAt: new Date().toISOString() };
+    saveUsers(users);
+  }
+  return user;
+};
+
 export const isAuthenticated = () => {
   const token = localStorage.getItem(TOKEN_KEY);
   const user = getCurrentUser();
@@ -189,8 +204,18 @@ export const fakeRegister = async (data) => {
   return localRegister(data);
 };
 
-export const fakeSendOtp = (email) =>
-  new Promise((resolve, reject) => {
+export const fakeSendOtp = async (email) => {
+  if (await isBackendReachable()) {
+    try {
+      const res = await api.post("/auth/forgot-password/send-otp", { email });
+      // In non-production the backend echoes the OTP back for local testing.
+      return res.data?.devOtp || "sent";
+    } catch (err) {
+      const message = err?.response?.data?.message;
+      if (message) throw { email: message };
+    }
+  }
+  return new Promise((resolve, reject) => {
     sleep().then(() => {
       if (!getUsers().some((u) => u.email.toLowerCase() === email.toLowerCase())) {
         reject({ email: "No account found with this email" });
@@ -199,25 +224,34 @@ export const fakeSendOtp = (email) =>
       resolve("123456");
     });
   });
+};
 
-export const fakeVerifyOtp = (otp) =>
-  new Promise((resolve, reject) => {
+export const fakeVerifyOtp = async (email, otp) => {
+  if (await isBackendReachable()) {
+    try {
+      const res = await api.post("/auth/forgot-password/verify-otp", { email, otp });
+      return res.data?.resetToken || null;
+    } catch (err) {
+      const message = err?.response?.data?.message;
+      if (message) throw { otp: message };
+    }
+  }
+  return new Promise((resolve, reject) => {
     sleep().then(() => {
-      if (otp === "123456") resolve(true);
+      if (otp === "123456") resolve(null);
       else reject({ otp: "Invalid OTP" });
     });
   });
+};
 
-export const fakeResetPassword = async (email, password) => {
+export const fakeResetPassword = async (email, password, resetToken) => {
   if (await isBackendReachable()) {
     try {
-      await api.post("/auth/forgot-password", { email, password });
+      await api.post("/auth/forgot-password/reset", { resetToken, password });
       return true;
     } catch (err) {
       const message = err?.response?.data?.message;
-      if (message) {
-        throw { email: message };
-      }
+      if (message) throw { password: message };
     }
   }
   return new Promise((resolve) => {

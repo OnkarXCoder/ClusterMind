@@ -6,7 +6,7 @@ import StatusBadge from '../../components/marketing/StatusBadge'
 import LoadingState from '../../components/marketing/LoadingState'
 import EmptyState from '../../components/marketing/EmptyState'
 import { useToast } from '../../components/marketing/Toast'
-import { getAdminMlModels, getDataset, syncCustomerDataset, trainModel } from '../../api'
+import { getAdminMlModels, getDataset, getModels, syncCustomerDataset, trainModel } from '../../api'
 
 const fallbackDetails = {
   kmeans: {
@@ -63,14 +63,17 @@ export default function AdminModelManagementPage() {
   const loadModels = async () => {
     setLoading(true)
     const [liveModels, liveDataset, adminMl] = await Promise.all([
-      getAdminMlModels(),
-      getDataset(),
-      getAdminMlModels(),
-    ]).catch(() => [null, null, null])
-    const modelsRes = liveModels?.models || liveModels || adminMl?.models || []
+      getModels().catch(() => null),
+      getDataset().catch(() => null),
+      getAdminMlModels().catch(() => null),
+    ])
+    const modelsRes = Array.isArray(liveModels)
+      ? liveModels
+      : Array.isArray(adminMl?.models)
+        ? adminMl.models
+        : []
     setModels(modelsRes)
-    if (liveDataset) setDataset(liveDataset)
-    else if (adminMl?.dataset) setDataset(adminMl.dataset)
+    setDataset(liveDataset || adminMl?.dataset || null)
     setPredictionLogs(adminMl?.predictionLogs || [])
     setLoading(false)
   }
@@ -91,15 +94,22 @@ export default function AdminModelManagementPage() {
   }
 
   const handleTrain = async (model = models[0]) => {
+    if (!model) {
+      show('No model is available to train. Sync customers or restore a dataset first.', 'error')
+      return
+    }
     const algorithm = keyForModel(model)
     setTraining(algorithm)
-    const trained = await trainModel(algorithm, model.clusters || 5)
-    await loadModels()
-    setTraining('')
-    show(
-      trained ? `${trained.name} trained on ${trained.rows} customers.` : 'Training failed. Sync customers or restore a dataset first.',
-      trained ? 'success' : 'error',
-    )
+    try {
+      const trained = await trainModel(algorithm, model.clusters || 5)
+      await loadModels()
+      show(
+        trained ? `${trained.name} trained on ${trained.rows} customers.` : 'Training failed. Sync customers or restore a dataset first.',
+        trained ? 'success' : 'error',
+      )
+    } finally {
+      setTraining('')
+    }
   }
 
   const tabs = [
@@ -218,7 +228,7 @@ export default function AdminModelManagementPage() {
                     <Button size="sm" icon={m.status === 'Active' ? RefreshCw : Play} onClick={() => handleTrain(m)} disabled={training === key}>
                       {training === key ? 'Training...' : m.status === 'Active' ? 'Retrain' : 'Train Now'}
                     </Button>
-                    <Button size="sm" variant="secondary" icon={Eye} onClick={() => show(`${m.name} uses ${dataset.records || 0} customer rows from ${dataset.name}.`, 'info')}>
+                    <Button size="sm" variant="secondary" icon={Eye} onClick={() => show(`${m.name} uses ${dataset?.records || 0} customer rows from ${dataset?.name || 'the active dataset'}.`, 'info')}>
                       Explain
                     </Button>
                   </div>

@@ -11,6 +11,11 @@ import ActivityLog from '../models/ActivityLog.js'
 import MlModel from '../models/MlModel.js'
 import PredictionLog from '../models/PredictionLog.js'
 import Product from '../models/Product.js'
+import CustomerBehavior from '../models/CustomerBehavior.js'
+import User from '../models/User.js'
+import Order from '../models/Order.js'
+import Cart from '../models/Cart.js'
+import Wishlist from '../models/Wishlist.js'
 import {
   BEHAVIOUR_ANALYSIS,
   SEGMENTATION,
@@ -246,20 +251,68 @@ router.get(
     }).lean()
     if (!customer) return res.status(404).json({ message: 'Customer not found' })
 
-    const [orders, feedback] = await Promise.all([
+    const userLookup = [
+      { _id: /^[a-f\d]{24}$/i.test(String(customer.customerId)) ? customer.customerId : undefined },
+      ...(customer.email ? [{ email: String(customer.email).toLowerCase() }] : []),
+      ...(customer.phone ? [{ contact: customer.phone }] : []),
+    ].filter((condition) => !Object.values(condition).includes(undefined))
+    const user = userLookup.length ? await User.findOne({ $or: userLookup }).lean() : null
+    const behaviorCustomerIds = [
+      /^[a-f\d]{24}$/i.test(String(customer.customerId)) ? customer.customerId : null,
+      user?._id,
+    ].filter(Boolean)
+
+    const [orders, liveOrders, feedback, behaviors, cart, wishlist] = await Promise.all([
       AdminOrder.find({ customer: customer.name }).sort({ orderId: -1 }).lean(),
+      behaviorCustomerIds.length
+        ? Order.find({ customerId: { $in: behaviorCustomerIds } }).sort({ createdAt: -1 }).lean()
+        : [],
       FeedbackEntry.find({ customer: customer.name }).lean(),
+      behaviorCustomerIds.length
+        ? CustomerBehavior.find({ customerId: { $in: behaviorCustomerIds } })
+          .sort({ timestamp: -1 })
+          .limit(100)
+          .populate('productId', 'name category price image')
+          .lean()
+        : [],
+      behaviorCustomerIds.length
+        ? Cart.findOne({ customerId: { $in: behaviorCustomerIds } }).populate('items.productId', 'name category price image').lean()
+        : null,
+      behaviorCustomerIds.length
+        ? Wishlist.findOne({ customerId: { $in: behaviorCustomerIds } }).populate('productIds', 'name category price image').lean()
+        : null,
     ])
+
+    const formatBehavior = (behavior) => ({
+      id: behavior._id,
+      action: behavior.action,
+      productId: behavior.productId?._id || behavior.productId || null,
+      productName: behavior.productName || behavior.productId?.name || '',
+      category: behavior.category || behavior.productId?.category || '',
+      searchTerm: behavior.searchTerm || '',
+      source: behavior.source || '',
+      metadata: behavior.metadata || {},
+      date: behavior.timestamp || behavior.createdAt,
+    })
 
     res.json({
       customer,
-      purchaseHistory: orders.map((o) => ({
-        orderId: o.orderId,
-        date: o.date,
-        items: `${o.items} item(s)`,
-        total: o.total,
-        status: o.status,
-      })),
+      purchaseHistory: [
+        ...liveOrders.map((order) => ({
+          orderId: order.orderId || String(order._id),
+          date: order.createdAt,
+          items: `${order.items?.length || 0} item(s)`,
+          total: order.totals?.total || 0,
+          status: order.status,
+        })),
+        ...orders.map((o) => ({
+          orderId: o.orderId,
+          date: o.date,
+          items: `${o.items} item(s)`,
+          total: o.total,
+          status: o.status,
+        })),
+      ],
       feedback: feedback.map((f) => ({
         id: f._id,
         type: f.type,
@@ -267,6 +320,27 @@ router.get(
         rating: f.rating,
         date: f.date,
         product: f.product,
+      })),
+      browsingHistory: behaviors.filter((b) => ['view', 'click'].includes(b.action)).map(formatBehavior),
+      searchHistory: behaviors.filter((b) => b.action === 'search').map(formatBehavior),
+      cartActivity: [
+        ...(cart?.items || []).map((item) => ({
+          id: `${item.productId?._id || item.productId}-${item.addedAt}`,
+          action: 'cart_item',
+          productId: item.productId?._id || item.productId,
+          productName: item.productId?.name || 'Product',
+          category: item.productId?.category || '',
+          source: 'current-cart',
+          metadata: { quantity: item.quantity },
+          date: item.addedAt,
+        })),
+        ...behaviors.filter((b) => b.action === 'add_to_cart').map(formatBehavior),
+      ],
+      wishlist: (wishlist?.productIds || []).map((product) => ({
+        id: product._id,
+        productName: product.name,
+        category: product.category,
+        date: wishlist.updatedAt,
       })),
     })
   })

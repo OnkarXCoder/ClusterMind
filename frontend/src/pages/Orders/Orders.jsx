@@ -50,6 +50,7 @@ function normalise(order, source) {
   };
   return {
     id,
+    displayId: order.orderId || order.id || id,
     source,
     items,
     totals,
@@ -176,7 +177,7 @@ export default function Orders() {
                   <div className="order-card" key={order.id}>
                     <div className="order-card-head">
                       <div>
-                        <span className="order-id">{String(order.id).slice(-10).toUpperCase()}</span>
+                        <span className="order-id">{String(order.displayId).slice(-14).toUpperCase()}</span>
                         <span className="order-date">{formatDate(order.placedAt)}</span>
                       </div>
                       <span className={`order-status ${STATUS_TONE[order.status] || "blue"}`}>{order.status}</span>

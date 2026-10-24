@@ -6,7 +6,7 @@ import StatusBadge from '../../components/marketing/StatusBadge'
 import SearchBar from '../../components/marketing/SearchBar'
 import Modal from '../../components/marketing/Modal'
 import { useToast } from '../../components/marketing/Toast'
-import { createAdminProduct, deleteAdminProduct, getAdminProducts } from '../../api'
+import { createAdminProduct, deleteAdminProduct, getAdminProducts, updateAdminProduct } from '../../api'
 import { giftRecipients } from '../../components/giftRules'
 
 const emptyForm = {
@@ -38,6 +38,7 @@ export default function AdminProductManagementPage() {
   const { show } = useToast()
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
   const [viewProduct, setViewProduct] = useState(null)
   const [activeTab, setActiveTab] = useState('products')
   const [form, setForm] = useState(emptyForm)
@@ -68,6 +69,32 @@ export default function AdminProductManagementPage() {
 
   const openAddForm = () => {
     setForm(emptyForm)
+    setEditingProduct(null)
+    setImageError('')
+    setShowAdd(true)
+  }
+
+  const productToForm = (product) => ({
+    name: product.name || '',
+    description: product.description || '',
+    category: product.category || '',
+    brand: product.brand === 'â€”' ? '' : product.brand || '',
+    price: product.price ?? '',
+    oldPrice: product.oldPrice ?? '',
+    discount: product.discount ?? '',
+    stock: product.stock ?? '',
+    rating: product.rating ?? '',
+    reviews: product.reviews ?? '',
+    badge: product.badge || '',
+    image: product.image || '/products/books.jpg',
+    giftTags: Array.isArray(product.giftTags) ? product.giftTags.join(', ') : product.giftTags || '',
+    aiRecommended: product.aiRecommended ?? true,
+    freeDelivery: product.freeDelivery ?? true,
+  })
+
+  const openEditForm = (product) => {
+    setEditingProduct(product)
+    setForm(productToForm(product))
     setImageError('')
     setShowAdd(true)
   }
@@ -124,7 +151,19 @@ export default function AdminProductManagementPage() {
     [products],
   )
 
-  const handleAdd = async () => {
+  const normalizeProduct = (product) => ({
+    ...product,
+    id: product.id || product._id,
+    status:
+      product.status ||
+      (Number(product.stock || 0) === 0
+        ? 'Out of Stock'
+        : Number(product.stock || 0) < 15
+          ? 'Low Stock'
+          : 'Active'),
+  })
+
+  const handleSaveProduct = async () => {
     if (!form.name.trim() || !form.category.trim() || !form.price || Number(form.price) <= 0) {
       show('Please fill product name, category and price', 'error')
       return
@@ -144,7 +183,7 @@ export default function AdminProductManagementPage() {
 
     try {
       setSaving(true)
-      const created = await createAdminProduct({
+      const payload = {
         ...form,
         giftTags: form.giftTags,
         price: Number(form.price),
@@ -153,18 +192,30 @@ export default function AdminProductManagementPage() {
         stock: Number(form.stock || 0),
         rating: Number(form.rating || 0),
         reviews: Number(form.reviews || 0),
-      })
-      if (created) {
-        setProducts((prev) => [created, ...prev])
-      } else {
-        await loadProducts()
       }
-      show(`Product "${form.name}" added successfully`, 'success')
+      if (editingProduct) {
+        const updated = await updateAdminProduct(editingProduct.id, payload)
+        if (updated) {
+          setProducts((prev) => prev.map((item) => (item.id === editingProduct.id ? normalizeProduct(updated) : item)))
+        } else {
+          await loadProducts()
+        }
+        show(`Product "${form.name}" updated successfully`, 'success')
+      } else {
+        const created = await createAdminProduct(payload)
+        if (created) {
+          setProducts((prev) => [normalizeProduct(created), ...prev])
+        } else {
+          await loadProducts()
+        }
+        show(`Product "${form.name}" added successfully`, 'success')
+      }
       setShowAdd(false)
+      setEditingProduct(null)
       setForm(emptyForm)
       setImageError('')
     } catch (err) {
-      show(err.message || 'Unable to add product', 'error')
+      show(err.message || `Unable to ${editingProduct ? 'update' : 'add'} product`, 'error')
     } finally {
       setSaving(false)
     }
@@ -263,7 +314,7 @@ export default function AdminProductManagementPage() {
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <Button variant="ghost" size="sm" icon={Eye} onClick={() => setViewProduct(p)}>View</Button>
-                        <Button variant="ghost" size="sm" icon={Edit3} onClick={() => show('Edit support can be added next', 'info')}>Edit</Button>
+                        <Button variant="ghost" size="sm" icon={Edit3} onClick={() => openEditForm(p)}>Edit</Button>
                         <button onClick={() => handleDelete(p)} style={{ padding: 6, borderRadius: 8, border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer' }}>
                           <Trash2 size={14} />
                         </button>
@@ -345,14 +396,14 @@ export default function AdminProductManagementPage() {
 
       <Modal
         open={showAdd}
-        onClose={() => setShowAdd(false)}
-        title="Add New Product"
-        subtitle="Saved directly to MongoDB"
+        onClose={() => { setShowAdd(false); setEditingProduct(null) }}
+        title={editingProduct ? 'Edit Product' : 'Add New Product'}
+        subtitle={editingProduct ? 'Update product details in MongoDB' : 'Saved directly to MongoDB'}
         size="xl"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowAdd(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={saving}>{saving ? 'Saving product...' : 'Add Product'}</Button>
+            <Button variant="secondary" onClick={() => { setShowAdd(false); setEditingProduct(null) }} disabled={saving}>Cancel</Button>
+            <Button onClick={handleSaveProduct} disabled={saving}>{saving ? 'Saving product...' : editingProduct ? 'Update Product' : 'Add Product'}</Button>
           </>
         }
       >

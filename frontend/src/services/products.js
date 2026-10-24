@@ -1,3 +1,6 @@
+import { MAIN_CATEGORY_NAMES, categoryMatches, getCategoryAliases } from '../data/categoryCatalog'
+import { resolveProductImage } from '../utils/productImages'
+
 const API_BASE = '/api/products'
 
 function getToken() {
@@ -50,7 +53,7 @@ const normaliseProduct = (p) => {
     name: p.name || 'Unnamed Product',
     brand: p.brand || 'Generic',
     category: p.category || 'General',
-    image: p.image || p.thumbnail || '',
+    image: resolveProductImage(p),
     price,
     oldPrice,
     discount: toNumber(discount),
@@ -88,9 +91,10 @@ export const getCategories = async () => {
     const res = await fetch(`${API_BASE}/categories`, { headers: headers() })
     if (!res.ok) throw new Error()
     const data = await res.json()
-    return data.categories || []
+    const dbCategories = data.categories || []
+    return [...new Set([...MAIN_CATEGORY_NAMES, ...dbCategories])]
   } catch {
-    return []
+    return MAIN_CATEGORY_NAMES
   }
 }
 
@@ -110,11 +114,14 @@ export const getProducts = async ({
   price = '',
   ratings = [],
   availability = '',
+  subcategory = '',
 } = {}) => {
   try {
     const params = {}
     if (search) params.search = search
-    if (category && category !== 'All') params.category = category
+    const aliases = getCategoryAliases(category)
+    const useServerCategory = aliases.length === 1 && category && category !== 'All' && category !== 'All Products'
+    if (useServerCategory) params.category = category
     if (brands.length) params.brand = brands[0]
     if (availability === 'instock') params.inStock = true
 
@@ -128,6 +135,17 @@ export const getProducts = async ({
     if (ratings.length) params.minRating = Math.max(...ratings)
 
     let products = await fetchProducts(params)
+
+    if (!useServerCategory && category && category !== 'All' && category !== 'All Products') {
+      products = products.filter((p) => categoryMatches(p.category, category))
+    }
+
+    if (subcategory) {
+      const q = subcategory.toLowerCase()
+      products = products.filter((p) =>
+        `${p.name || ''} ${p.category || ''} ${p.brand || ''} ${p.description || ''}`.toLowerCase().includes(q)
+      )
+    }
 
     if (brands.length > 1) {
       products = products.filter(p => brands.includes(p.brand))

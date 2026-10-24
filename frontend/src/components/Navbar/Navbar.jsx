@@ -7,10 +7,12 @@ import {
   ShoppingCart,
   ChevronDown,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { subscribeCart, getCartCount } from "../../services/cart";
 import { subscribeWishlist, getWishlistCount } from "../../services/wishlist";
-import { getCurrentUser } from "../../services/auth";
+import { getCurrentUser, logout } from "../../services/auth";
+import { trackSearch } from "../../services/behavior";
 import defaultProfile from "../../assets/users/profile.jpg";
 import "./Navbar.css";
 
@@ -42,8 +44,14 @@ export default function Navbar({ onToggleSidebar }) {
 
   const doSearch = () => {
     if (query.trim()) {
+      trackSearch(query, { source: "customer-navbar" });
       navigate("/products?q=" + encodeURIComponent(query.trim()));
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
   return (
@@ -97,6 +105,11 @@ export default function Navbar({ onToggleSidebar }) {
           <span>{firstName}</span>
           <ChevronDown size={18} />
         </Link>
+
+        <button className="nav-logout" type="button" onClick={handleLogout}>
+          <LogOut size={17} />
+          <span>Logout</span>
+        </button>
 
       </div>
 

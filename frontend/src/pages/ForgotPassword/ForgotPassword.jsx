@@ -19,6 +19,7 @@ export default function ForgotPassword() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [resetToken, setResetToken] = useState(null);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -49,7 +50,8 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      await fakeVerifyOtp(otp.trim());
+      const token = await fakeVerifyOtp(email.trim(), otp.trim());
+      setResetToken(token);
       setStep(2);
     } catch (errObj) {
       setErrors(errObj);
@@ -69,8 +71,10 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      await fakeResetPassword(email, password);
+      await fakeResetPassword(email.trim(), password, resetToken);
       setDone(true);
+    } catch (errObj) {
+      setErrors(errObj && typeof errObj === "object" ? errObj : {});
     } finally {
       setLoading(false);
     }

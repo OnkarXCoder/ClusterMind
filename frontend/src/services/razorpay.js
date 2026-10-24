@@ -32,8 +32,9 @@ export function loadRazorpay() {
 /**
  * Opens the Razorpay modal.
  *
- * Resolves only after the SERVER has verified the payment signature, so
- * `onSuccess` here means "confirmed by us", not merely "the browser said so".
+ * Resolves with the gateway's payment response once the browser reports
+ * success. The caller must still verify the signature server-side before
+ * treating the payment as settled.
  */
 export async function openRazorpayCheckout({ order, config, user, onDismiss }) {
   const Razorpay = await loadRazorpay();
@@ -60,6 +61,15 @@ export async function openRazorpayCheckout({ order, config, user, onDismiss }) {
           onDismiss?.();
           reject(new Error("PAYMENT_DISMISSED"));
         },
+      },
+      // Fires after the user completes the payment in the browser. The
+      // signature still has to be verified by the server before we trust it.
+      handler: (response) => {
+        resolve({
+          paymentId: response?.razorpay_payment_id,
+          gatewayOrderId: response?.razorpay_order_id,
+          signature: response?.razorpay_signature,
+        });
       },
     };
 
