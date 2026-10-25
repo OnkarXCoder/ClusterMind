@@ -2,10 +2,11 @@ import jwt from 'jsonwebtoken'
 
 const getSecret = () => {
   const secret = process.env.JWT_SECRET
-  if (!secret) {
+  if (secret) return secret
+  if (process.env.NODE_ENV === 'production') {
     throw new Error('JWT_SECRET environment variable is required.')
   }
-  return secret
+  return 'shopsmart-dev-secret'
 }
 
 export function signToken(payload) {
