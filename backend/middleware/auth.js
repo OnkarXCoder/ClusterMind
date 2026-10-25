@@ -1,12 +1,15 @@
 import jwt from 'jsonwebtoken'
 
-export const JWT_SECRET = process.env.JWT_SECRET
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required. Set it before starting the server.')
+const getSecret = () => {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required.')
+  }
+  return secret
 }
 
 export function signToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+  return jwt.sign(payload, getSecret(), { expiresIn: '7d' })
 }
 
 export function verifyToken(req, res, next) {
@@ -16,7 +19,7 @@ export function verifyToken(req, res, next) {
     return res.status(401).json({ message: 'Authentication required.' })
   }
   try {
-    req.user = jwt.verify(token, JWT_SECRET)
+    req.user = jwt.verify(token, getSecret())
     next()
   } catch {
     return res.status(401).json({ message: 'Invalid or expired token.' })

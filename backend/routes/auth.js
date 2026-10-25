@@ -9,10 +9,17 @@ import AdminCustomer from '../models/AdminCustomer.js'
 import CustomerSegment from '../models/CustomerSegment.js'
 import Loyalty from '../models/Loyalty.js'
 import ActivityLog from '../models/ActivityLog.js'
-import { JWT_SECRET } from '../middleware/auth.js'
 
 const router = Router()
 const RESET_TOKEN_TTL = '10m'
+
+const getSecret = () => {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required.')
+  }
+  return secret
+}
 
 function calcAge(dob) {
   if (!dob) return null
@@ -130,7 +137,7 @@ router.post('/register', async (req, res) => {
       console.error('Customer analytics registration failed:', analyticsErr.message)
     }
 
-    const token = jwt.sign({ id: user._id, role: 'customer' }, JWT_SECRET, { expiresIn: '7d' })
+    const token = jwt.sign({ id: user._id, role: 'customer' }, getSecret(), { expiresIn: '7d' })
 
     res.status(201).json({
       message: 'Registration successful.',
@@ -170,7 +177,7 @@ router.post('/login', async (req, res) => {
     }
 
     const role = user ? 'customer' : admin ? 'admin' : 'marketing'
-    const token = jwt.sign({ id: account._id, role }, JWT_SECRET, { expiresIn: '7d' })
+    const token = jwt.sign({ id: account._id, role }, getSecret(), { expiresIn: '7d' })
 
     const response = {
       token,
@@ -273,7 +280,7 @@ router.post('/forgot-password/verify-otp', async (req, res) => {
 
     const resetToken = jwt.sign(
       { id: entry.userId, purpose: 'password-reset' },
-      JWT_SECRET,
+      getSecret(),
       { expiresIn: RESET_TOKEN_TTL }
     )
     resetOtpStore.delete(key)
@@ -296,7 +303,7 @@ router.post('/forgot-password/reset', async (req, res) => {
 
     let payload
     try {
-      payload = jwt.verify(resetToken, JWT_SECRET)
+      payload = jwt.verify(resetToken, getSecret())
     } catch {
       return res.status(400).json({ message: 'Reset session is invalid or has expired.' })
     }
