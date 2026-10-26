@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npx --yes vite@6.4.3 build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint ."
   },
