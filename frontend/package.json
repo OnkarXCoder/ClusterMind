@@ -23,6 +23,7 @@
     "recharts": "^2.15.0"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.34.0",
     "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.17.0",
