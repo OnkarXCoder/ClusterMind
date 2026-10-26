@@ -12,3 +12,4 @@ venv/
 vercel/
 .vercel/
 .DS_Store
+.vercel
