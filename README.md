@@ -44,11 +44,28 @@ The application is organized as three cooperating services:
 
 ## Screenshots
 
-<p align="center">
-  <img src="docs/login-screen.png" alt="ClusterMind login screen" />
-</p>
-
-<p align="center"><em>ClusterMind authentication screen</em></p>
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/storefront.png" alt="ClusterMind customer storefront" />
+      <p align="center"><em>Customer storefront</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/product-catalog.png" alt="ClusterMind product catalog" />
+      <p align="center"><em>Product catalog with search and filters</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/category-browsing.png" alt="ClusterMind category browsing" />
+      <p align="center"><em>Category browsing</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/secure-authentication.png" alt="ClusterMind secure authentication" />
+      <p align="center"><em>Secure authentication</em></p>
+    </td>
+  </tr>
+</table>
 
 ---
 
